@@ -22,16 +22,55 @@ cls=$(kpsewhich kpi-thesis.cls) && repo=$(cd "$(dirname "$(realpath "$cls")")/..
   && test -f "$repo/justfile" && test -d "$repo/templates" && echo "$repo"
 ```
 
-На Windows `just install` копіює клас замість симлінка, і перевірка не пройде — тоді
-запитати, куди клоновано репозиторій. Якщо `kpsewhich` нічого не знаходить — клас не встановлено. Тоді запитати користувача, куди
-клонувати, і встановити (потрібні TeX Live / MacTeX, `just`, шрифти Times New Roman і
-Courier New; деталі для ОС — у README репозиторію):
-
-```sh
-git clone https://github.com/sokolovgit/kpi-thesis <dir> && cd <dir> && just install
-```
-
 Усередині роботи шлях до репозиторію вже записаний у її `justfile` (`KPI := '...'`).
+На Windows `just install` копіює клас замість симлінка, і перевірка вище не пройде — тоді
+запитати, куди клоновано репозиторій. Якщо `kpsewhich` не знаходить клас або сам `kpsewhich`
+відсутній — це перший запуск: пройти «Перше налаштування».
+
+## Перше налаштування
+
+Плагін дає лише цей скіл; TeX, клас і шаблони ставляться окремо. Іти по кроках, не
+вгадувати з помилок збірки.
+
+1. **Перевірити все одним викликом** і показати користувачу, чого бракує:
+
+   ```sh
+   [ -d /Library/TeX/texbin ] && PATH="/Library/TeX/texbin:$PATH"
+   for c in xelatex latexmk kpsewhich just pdfunite pdftotext git; do
+     command -v "$c" >/dev/null && echo "ok  $c" || echo "--  $c"
+   done
+   command -v python3 >/dev/null || command -v python >/dev/null && echo "ok  python" || echo "--  python"
+   command -v fc-list >/dev/null && for f in "Times New Roman" "Courier New"; do
+     fc-list | grep -q "$f" && echo "ok  $f" || echo "--  $f"; done
+   ```
+
+   Шрифти перевіряються лише там, де є `fc-list` (Linux); у macOS і Windows вони вбудовані.
+
+2. **Поставити відсутнє** — дати команди для ОС користувача і виконувати лише з його згоди.
+   Привілейовані команди (`sudo apt …`, інсталятори з GUI) користувач запускає сам.
+   - macOS: `brew install --cask mactex-no-gui` (кілька ГБ, 10–20 хв) і `brew install just poppler`.
+     Після MacTeX бінарники в `/Library/TeX/texbin` — у новому терміналі вони вже в PATH.
+   - Linux (Debian/Ubuntu): `sudo apt install texlive-xetex texlive-latex-extra
+     texlive-fonts-recommended texlive-plain-generic texlive-lang-cyrillic latexmk
+     poppler-utils python3 ttf-mscorefonts-installer`; `just` ≥ 1.21 — бінарник із
+     https://github.com/casey/just/releases (в apt часто старий або відсутній).
+   - Windows: TeX Live (https://tug.org/texlive/windows.html), Git for Windows (усі команди —
+     у Git Bash), `winget install Casey.Just Python.Python.3.12`, `scoop install poppler`.
+     Альтернатива — WSL з кроками для Linux.
+
+3. **Клонувати й встановити клас.** Запитати місце; за замовчуванням `~/kpi-thesis`, окремо від
+   тек із роботами (репозиторій — інструмент, не місце для курсової):
+
+   ```sh
+   git clone https://github.com/sokolovgit/kpi-thesis ~/kpi-thesis && cd ~/kpi-thesis && just install
+   ```
+
+4. **Переконатися, що все збирається:** `just test` у репозиторії (1–2 хв). Обидва шаблони
+   мають зібратися; помилки `check` лише про `\todo` — норма. Якщо збірка падає, лог
+   покаже причину (бракує пакета TeX — доставити; `fontspec` не знаходить шрифт — крок 2).
+
+5. Далі — «Нова робота». Оновлення класу пізніше: `git pull` у репозиторії
+   (на Windows після цього ще раз `just install`).
 
 ## Нова робота
 
