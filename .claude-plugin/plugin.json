@@ -1,0 +1,20 @@
+{
+  "name": "kpi-thesis",
+  "description": "Дипломний проєкт і курсові КПІ ФІОТ (кафедра ІПІ) у LaTeX: структура, правила оформлення за методичкою й ДСТУ 3008:2015, перевірки нормоконтролю.",
+  "author": {
+    "name": "Oleksandr Sokolov",
+    "url": "https://github.com/sokolovgit"
+  },
+  "homepage": "https://github.com/sokolovgit/kpi-thesis",
+  "repository": "https://github.com/sokolovgit/kpi-thesis",
+  "license": "MIT",
+  "keywords": [
+    "latex",
+    "xelatex",
+    "thesis",
+    "diploma",
+    "coursework",
+    "kpi",
+    "dstu"
+  ]
+}

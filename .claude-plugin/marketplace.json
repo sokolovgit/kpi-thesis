@@ -1,0 +1,18 @@
+{
+  "name": "kpi-thesis",
+  "owner": {
+    "name": "Oleksandr Sokolov",
+    "url": "https://github.com/sokolovgit"
+  },
+  "metadata": {
+    "description": "Плагін Claude Code для диплома й курсових КПІ ФІОТ (кафедра ІПІ) з LaTeX-класом kpi-thesis."
+  },
+  "plugins": [
+    {
+      "name": "kpi-thesis",
+      "source": "./",
+      "description": "Дипломний проєкт і курсові КПІ ФІОТ (кафедра ІПІ) у LaTeX: структура, правила оформлення, перевірки нормоконтролю.",
+      "category": "productivity"
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+% Текст програми (шаблон кафедри ч3 2026). Лише код, написаний особисто, без
+% згенерованого IDE та загальновідомих реалізацій. Лістинги підтягуються з репозиторію.
+\documentclass{kpi-thesis}
+\usepackage{kpi-titles}
+\input{../meta.tex}
+\lstset{language=Python}
+
+\begin{document}
+\kpiDocTitle{source-code}
+\mainmatter
+
+\noindent Посилання на репозиторій з повним текстом програмного коду: \url{https://github.com/...}
+
+\codefile{src/module/file.py}{\todo{назва функціональної задачі}}
+% \lstinputlisting[firstline=1,lastline=40]{../../app/src/module/file.py}
+\begin{lstlisting}
+def example():
+    return 42
+\end{lstlisting}
+
+\end{document}

@@ -1,0 +1,41 @@
+KPI := '@KPI_THESIS@'
+# Ім'я зведеного PDF для здачі
+OUT := 'Прізвище_ІП-XX'
+DOCS := 'specification explanatory-note source-code test-plan user-manual graphics'
+
+export PATH := if path_exists('/Library/TeX/texbin') == "true" { '/Library/TeX/texbin:' + env('PATH') } else { env('PATH') }
+# check.py prints Cyrillic; Windows consoles default to a legacy code page.
+export PYTHONUTF8 := '1'
+PYTHON := if os_family() == "windows" { "python" } else { "python3" }
+
+# Список рецептів
+default:
+    @just --list
+
+# Зібрати один документ: just build explanatory-note
+build doc:
+    latexmk -cd -silent {{doc}}/{{doc}}.tex
+
+# Зібрати все й звести в build/OUT.pdf (титул збирається останнім — бере числа з інших)
+all:
+    for d in {{DOCS}}; do latexmk -cd -silent $d/$d.tex || exit 1; done
+    latexmk -cd -silent -g title/title.tex
+    mkdir -p build
+    pdfunite title/build/title.pdf $(for d in {{DOCS}}; do printf '%s/build/%s.pdf ' $d $d; done) "build/{{OUT}}.pdf"
+    @echo "-> build/{{OUT}}.pdf"
+
+# Перезбирати документ при кожному збереженні
+watch doc:
+    latexmk -cd -pvc {{doc}}/{{doc}}.tex
+
+# Перевірки нормоконтролю (порядок джерел, посилання, «де:», десяткові коми, TODO, журнали)
+check:
+    {{PYTHON}} -I "{{KPI}}/scripts/check.py" .
+
+# Кількість сторінок, рисунків, таблиць, джерел для анотації та відомості
+stats:
+    {{PYTHON}} -I "{{KPI}}/scripts/check.py" --stats .
+
+# Прибрати проміжні файли
+clean:
+    rm -rf build */build

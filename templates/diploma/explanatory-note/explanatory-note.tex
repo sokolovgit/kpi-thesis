@@ -1,0 +1,27 @@
+% Пояснювальна записка. Структура — методичка §5.6 і додаток Л.
+\documentclass{kpi-thesis}
+\usepackage{kpi-titles}
+\input{../meta.tex}
+
+\begin{document}
+\kpiExplanatoryNoteTitle
+\mainmatter
+\tableofcontents
+
+\input{chapters/00-abbreviations}
+\input{chapters/00-intro}
+\input{chapters/01-analysis}
+\input{chapters/02-requirements}
+\input{chapters/03-design}
+\input{chapters/04-testing}
+\input{chapters/05-deployment}
+\input{chapters/99-conclusions}
+\input{chapters/sources}
+
+\appendices
+% Звіт Unicheck — обов'язковий додаток (покладіть PDF у media/).
+\IfFileExists{../media/similarity-report.pdf}
+  {\appendixpdf{Звіт подібності}{../media/similarity-report.pdf}}
+  {\appendix{Звіт подібності}\todo{media/similarity-report.pdf}}
+
+\end{document}

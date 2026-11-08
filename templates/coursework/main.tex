@@ -1,0 +1,33 @@
+% Курсова: один документ (титул + пояснювальна записка). Оформлення те саме, що в дипломі
+% (ДСТУ 3008:2015); склад розділів звірити з методичкою курсової своєї дисципліни.
+\documentclass[coursework]{kpi-thesis}
+\usepackage{kpi-titles}
+\kpiset{
+  title         = {\todo{Тема курсової роботи}},
+  discipline    = {\todo{Назва дисципліни}},
+  group         = {ІП-XX},
+  course        = {IV},
+  gender        = {m},
+  student       = {\todo{Прізвище Ім'я По батькові}},
+  advisor       = {\todo{посада, науковий ступінь, Прізвище І. П.}},
+  year          = {2027},
+}
+
+\begin{document}
+\kpiCourseworkTitle
+\mainmatter
+\tableofcontents
+
+\input{chapters/00-intro}
+\input{chapters/01-analysis}
+\input{chapters/02-design}
+\input{chapters/03-implementation}
+\input{chapters/04-testing}
+\input{chapters/99-conclusions}
+\input{chapters/sources}
+
+\appendices
+\appendix{Лістинг програми}
+% \lstinputlisting{../src/main.py}
+\todo{лістинг програми}
+\end{document}

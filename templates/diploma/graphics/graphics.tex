@@ -1,0 +1,16 @@
+% Графічний матеріал: титул А4 + аркуші А3 зі штампом (методичка §5.4, не менше 3 аркушів).
+% Шифри схем: ССВ, ССС, ССД, ССК, ССМ, СБД, КЕ, КЗ.
+\documentclass{kpi-thesis}
+\usepackage{kpi-graphics}
+\input{../meta.tex}
+
+\begin{document}
+\useTitlePaper
+\kpiDocTitle{graphics}
+\useDiagramPaper
+% Готова картинка з media/: \diagramPage{ССВ}{Схема структурна варіантів використання}{usecases.png}
+\graphicsSheet{ССВ}{Схема структурна варіантів використання}{\todo{діаграма варіантів використання}}
+\graphicsSheet{ССМ}{Схема структурна компонентів програмного забезпечення}{\todo{діаграма компонентів}}
+\graphicsSheet{СБД}{Схема бази даних}{\todo{модель бази даних}}
+% \diagramPage{КЕ}{Креслення вигляду екранних форм}{screens.png}
+\end{document}

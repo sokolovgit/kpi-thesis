@@ -1,0 +1,110 @@
+% kpi-graphics.sty — graphic material: A3 sheets with the ЄСКД title block.
+%   \diagramPage{ССВ}{Схема структурна варіантів використання}{usecases.png}
+%   \graphicsSheet{КЕ}{Креслення вигляду екранних форм}{<any content, 380×225 mm>}
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{kpi-graphics}[2026/11/08 v1.0 KPI FICE graphic material sheets]
+\RequirePackage{kpi-titles}
+\RequirePackage{tikz}
+\RequirePackage{totcount}
+
+\newtotcounter{graphicsSheetNumber}
+
+\newcommand{\kpi@setpdfpaper}[2]{\pdfpagewidth=#1\relax\pdfpageheight=#2\relax}
+\newcommand{\useTitlePaper}{%
+  \kpi@setpdfpaper{210mm}{297mm}%
+  \newgeometry{left=20mm,right=20mm,top=20mm,bottom=20mm}%
+}
+\newcommand{\useDiagramPaper}{%
+  \clearpage
+  \newgeometry{left=10mm,right=10mm,top=10mm,bottom=10mm}%
+  \kpi@setpdfpaper{420mm}{297mm}%
+  \setlength{\textwidth}{400mm}%
+  \setlength{\columnwidth}{\textwidth}%
+  \hsize=\textwidth
+  \setlength{\linewidth}{\textwidth}%
+}
+
+\newcommand{\stampTiny}{\fontsize{5.2}{6.2}\selectfont}
+\newcommand{\stampSmall}{\fontsize{6.5}{7.5}\selectfont}
+\newcommand{\stampMedium}{\fontsize{8}{9.5}\selectfont}
+\newcommand{\stampLarge}{\fontsize{10}{12}\selectfont}
+\newcommand{\graphicsCode}[1]{\kpiCode{graphics}.#1}
+
+\newcommand{\kpi@stamprole}[3]{%
+  \node[anchor=west,font=\stampTiny] at (231,#1) {#2};%
+  \node[anchor=west,font=\stampTiny] at (251,#1) {#3};%
+}
+
+\newcommand{\graphicsStamp}[2]{%
+  \fill[white] (230,5) rectangle (415,60);
+  \draw[line width=0.7pt] (230,5) rectangle (415,60);
+  \foreach \y in {10,15,20,25,30,35,40,45,50,55} {
+    \draw[line width=0.35pt] (230,\y) -- (295,\y);
+  }
+  \draw[line width=0.35pt] (238,35) -- (238,60);
+  \draw[line width=0.35pt] (250,35) -- (250,60);
+  \draw[line width=0.35pt] (275,35) -- (275,60);
+  \draw[line width=0.35pt] (288,35) -- (288,60);
+  \draw[line width=0.35pt] (250,5) -- (250,35);
+  \draw[line width=0.35pt] (275,5) -- (275,35);
+  \draw[line width=0.35pt] (288,5) -- (288,35);
+  \node[font=\stampTiny] at (234,37.5) {Зм.};
+  \node[font=\stampTiny] at (243.5,37.5) {Арк.};
+  \node[font=\stampTiny] at (263,37.5) {№ докум.};
+  \node[font=\stampTiny] at (281.5,37.5) {Підп.};
+  \node[font=\stampTiny] at (291.5,37.5) {Дата};
+  \kpi@stamprole{32.5}{Розробив}{\kpi@g{student_stamp}}
+  \kpi@stamprole{27.5}{Перевірив}{\kpi@g{advisor_stamp}}
+  \kpi@stamprole{22.5}{Т. контр.}{}
+  \kpi@stamprole{12.5}{Н. контр.}{\kpi@g{norm_stamp}}
+  \kpi@stamprole{7.5}{Затвердив}{\kpi@g{head_stamp}}
+  \draw[line width=0.7pt] (295,5) -- (295,60);
+  \draw[line width=0.5pt] (295,20) -- (415,20);
+  \draw[line width=0.5pt] (295,40) -- (415,40);
+  \draw[line width=0.5pt] (365,5) -- (365,40);
+  \node[align=center,font=\stampMedium] at (355,50) {\graphicsCode{#1}};
+  \node[align=center,text width=66mm,font=\stampLarge] at (330,30) {#2};
+  \node[align=center,text width=66mm,font=\stampSmall] at (330,12.5) {\kpiTitle};
+  \draw[line width=0.35pt] (365,35) -- (415,35);
+  \draw[line width=0.35pt] (365,25) -- (415,25);
+  \draw[line width=0.35pt] (385,20) -- (385,40);
+  \draw[line width=0.35pt] (400,25) -- (400,40);
+  \draw[line width=0.35pt] (371.7,25) -- (371.7,35);
+  \draw[line width=0.35pt] (378.4,25) -- (378.4,35);
+  \node[font=\stampSmall] at (375,37.5) {Літера};
+  \node[font=\stampSmall] at (392.5,37.5) {Маса};
+  \node[font=\stampSmall] at (407.5,37.5) {Масштаб};
+  \node[font=\stampTiny] at (375,22.5) {Аркуш \arabic{graphicsSheetNumber}};
+  \node[font=\stampTiny] at (400,22.5) {Аркушів \total{graphicsSheetNumber}};
+  \node[align=center,text width=47mm,font=\stampSmall] at (390,12.5)
+    {КПІ ім. Ігоря Сікорського\\Кафедра \kpi@g{department_short}\\гр. \kpiGroup};
+}
+
+\newcommand{\graphicsSheet}[3]{%
+  \clearpage
+  \stepcounter{graphicsSheetNumber}%
+  \thispagestyle{empty}%
+  \begin{tikzpicture}[remember picture,overlay,x=1mm,y=1mm]
+  \begin{scope}[shift={(current page.south west)}]
+    \node[inner sep=0pt] at (225,176.5) {%
+      \begin{minipage}[c][225mm][c]{380mm}
+      \centering
+      #3
+      \end{minipage}
+    };
+    \draw[line width=0.8pt] (20,5) rectangle (415,292);
+    \fill[white] (20,277) rectangle (90,292);
+    \draw[line width=0.7pt] (20,277) rectangle (90,292);
+    \node[rotate=180,font=\stampMedium] at (55,284.5) {\graphicsCode{#1}};
+    \graphicsStamp{#1}{#2}
+  \end{scope}
+  \end{tikzpicture}%
+  \mbox{}%
+}
+
+\newcommand{\diagramPage}[3]{%
+  \graphicsSheet{#1}{#2}{%
+    \includegraphics[width=380mm,height=225mm,keepaspectratio]{#3}%
+  }%
+}
+\endinput

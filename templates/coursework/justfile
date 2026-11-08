@@ -1,0 +1,32 @@
+KPI := '@KPI_THESIS@'
+# Ім'я PDF для здачі
+OUT := 'Прізвище_ІП-XX_курсова'
+
+export PATH := if path_exists('/Library/TeX/texbin') == "true" { '/Library/TeX/texbin:' + env('PATH') } else { env('PATH') }
+# check.py prints Cyrillic; Windows consoles default to a legacy code page.
+export PYTHONUTF8 := '1'
+PYTHON := if os_family() == "windows" { "python" } else { "python3" }
+
+default:
+    @just --list
+
+# Зібрати build/main.pdf
+build:
+    latexmk -silent main.tex
+
+# Зібрати й скопіювати в build/OUT.pdf
+all: build
+    cp build/main.pdf "build/{{OUT}}.pdf"
+    @echo "-> build/{{OUT}}.pdf"
+
+# Перезбирати при кожному збереженні
+watch:
+    latexmk -pvc main.tex
+
+# Перевірки нормоконтролю
+check:
+    {{PYTHON}} -I "{{KPI}}/scripts/check.py" .
+
+# Прибрати проміжні файли
+clean:
+    rm -rf build

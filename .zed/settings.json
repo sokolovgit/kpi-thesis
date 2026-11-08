@@ -1,0 +1,16 @@
+// texlab doesn't link \cite to a \bibitem in another file (every citation in a chapter shows
+// "Undefined reference"), and \bibitem entries always look unused. Broken \ref and \cite are
+// caught by `just check` from the LaTeX log instead.
+{
+  "lsp": {
+    "texlab": {
+      "settings": {
+        "texlab": {
+          "diagnostics": {
+            "ignoredPatterns": ["^Undefined reference$", "^Unused entry$"]
+          }
+        }
+      }
+    }
+  }
+}

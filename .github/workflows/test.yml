@@ -1,0 +1,21 @@
+name: test
+
+on: [push, pull_request]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install TeX Live, fonts, tools
+        run: |
+          echo "ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true" | sudo debconf-set-selections
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            texlive-xetex texlive-latex-extra texlive-fonts-recommended texlive-plain-generic texlive-lang-cyrillic \
+            latexmk poppler-utils ttf-mscorefonts-installer fontconfig
+          fc-cache -f
+          fc-list | grep -q "Times New Roman" && fc-list | grep -q "Courier New"
+      - uses: extractions/setup-just@v2
+      - run: just install
+      - run: just test
