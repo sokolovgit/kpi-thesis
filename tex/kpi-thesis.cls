@@ -161,17 +161,34 @@
 }
 \NewDocumentCommand\tablecontinued{}{\caption*{Продовження таблиці \thetable}}
 
-% --- Formula symbol explanations: «де» without a colon, symbols aligned ---
+% --- Formula symbol explanations: «де» without a colon, one symbol per line ---
 %   \begin{where} M & маса авто; \\ F & сила контакту. \end{where}
+% The dash follows each symbol at its own width: a column sized to the widest symbol
+% leaves a gap after short ones (q_d next to [w > d]). Wrapped lines and later rows start
+% under the first symbol, as in the ДСТУ 3008 example.
 \newlength{\kpi@wherewidth}
-\NewDocumentEnvironment{where}{}{%
-  \par\noindent
-  \settowidth{\kpi@wherewidth}{де\enspace}%
-  де\enspace
-  \tabularx{\dimexpr\linewidth-\kpi@wherewidth\relax}[t]{@{}>{$}l<{$}@{\ -- }X@{}}%
-}{%
-  \endtabularx\par
-}
+\ExplSyntaxOn
+\seq_new:N \l__kpi_where_rows_seq
+\seq_new:N \l__kpi_where_cells_seq
+\NewDocumentEnvironment{where}{+b}
+  {
+    \par
+    \settowidth{\kpi@wherewidth}{де\ }
+    \seq_set_split:Nnn \l__kpi_where_rows_seq { \\ } {#1}
+    \seq_map_indexed_inline:Nn \l__kpi_where_rows_seq
+      {
+        \tl_if_blank:nF {##2}
+          {
+            \seq_set_split:Nnn \l__kpi_where_cells_seq { & } {##2}
+            \noindent \hangindent=\kpi@wherewidth \hangafter=1
+            \int_compare:nNnTF {##1} = { 1 } { де\ } { \hspace*{\kpi@wherewidth} }
+            $ \seq_item:Nn \l__kpi_where_cells_seq { 1 } $ \ --\ \seq_item:Nn \l__kpi_where_cells_seq { 2 }
+            \par
+          }
+      }
+  }
+  {}
+\ExplSyntaxOff
 
 % --- Lists: «–» for plain lists; «а)» then «1)» for referenced lists ---
 \def\kpi@ukralph#1{\ifcase#1\or а\or б\or в\or г\or д\or е\or ж\or и\or к\or л\or м\or н\or п\or р\or с\or т\or у\or ф\or х\or ц\or ш\or щ\or ю\or я\else\@ctrerr\fi}
