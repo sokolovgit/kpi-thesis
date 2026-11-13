@@ -1,8 +1,20 @@
 name: test
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [main]
+  pull_request:
 
 jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Plugin manifests are valid JSON
+        run: for f in .claude-plugin/*.json; do python3 -m json.tool "$f" >/dev/null; done
+      - name: check.py tests
+        run: python3 -m unittest discover -s tests -v
+
   build:
     runs-on: ubuntu-latest
     steps:

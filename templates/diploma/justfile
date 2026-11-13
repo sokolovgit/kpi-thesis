@@ -1,6 +1,6 @@
 KPI := '@KPI_THESIS@'
-# Ім'я зведеного PDF для здачі
-OUT := 'Прізвище_ІП-XX'
+# Ім'я зведеного PDF для здачі — з meta.tex: <прізвище зі student-stamp>_<group>
+OUT := `sed -nE 's/^ *student-stamp *= *\{([^ ~}]+).*/\1/p' meta.tex | head -n1` + '_' + `sed -nE 's/^ *group *= *\{([^}]*)\}.*/\1/p' meta.tex | head -n1`
 DOCS := 'specification explanatory-note source-code test-plan user-manual graphics'
 
 export PATH := if path_exists('/Library/TeX/texbin') == "true" { '/Library/TeX/texbin:' + env('PATH') } else { env('PATH') }
@@ -16,13 +16,30 @@ default:
 build doc:
     latexmk -cd -silent {{doc}}/{{doc}}.tex
 
-# Зібрати все й звести в build/OUT.pdf (титул збирається останнім — бере числа з інших)
+# Зібрати все й звести в build/<OUT>.pdf (титул збирається останнім — бере числа з інших)
 all:
-    for d in {{DOCS}}; do latexmk -cd -silent $d/$d.tex || exit 1; done
+    #!/usr/bin/env bash
+    set -euo pipefail
+    for d in {{DOCS}}; do latexmk -cd -silent $d/$d.tex; done
     latexmk -cd -silent -g title/title.tex
     mkdir -p build
-    pdfunite title/build/title.pdf $(for d in {{DOCS}}; do printf '%s/build/%s.pdf ' $d $d; done) "build/{{OUT}}.pdf"
-    @echo "-> build/{{OUT}}.pdf"
+    pdfs="title/build/title.pdf $(for d in {{DOCS}}; do printf '%s/build/%s.pdf ' $d $d; done)"
+    if command -v pdfunite >/dev/null; then
+      pdfunite $pdfs "build/{{OUT}}.pdf"
+    else
+      # no poppler: merge with XeLaTeX itself, each page keeping its own size (A3 sheets stay A3)
+      { echo '\documentclass{article}\usepackage{graphicx}\hoffset=-1in\voffset=-1in'
+        echo '\newcount\pgs\newcount\pg\def\addpdf#1{\pgs=\XeTeXpdfpagecount"#1"\relax\pg=0'
+        echo '\loop\ifnum\pg<\pgs\advance\pg 1\setbox0\hbox{\includegraphics[page=\the\pg]{#1}}'
+        echo '\pdfpagewidth=\wd0\pdfpageheight=\ht0\shipout\box0\repeat}'
+        echo '\begin{document}'
+        for f in $pdfs; do echo "\\addpdf{../$f}"; done
+        echo '\end{document}'; } > build/merge.tex
+      (cd build && xelatex -interaction=batchmode merge.tex >/dev/null)
+      mv build/merge.pdf "build/{{OUT}}.pdf"
+      rm -f build/merge.*
+    fi
+    echo "-> build/{{OUT}}.pdf"
 
 # Перезбирати документ при кожному збереженні
 watch doc:
