@@ -30,6 +30,11 @@
   коментарях коду; `literate` і `extendedchars=false` не допомагають. Для коду з українським
   текстом — `fvextra`: `\VerbatimInput[fontsize=\setstretch{1}\fontsize{10}{11.5}\selectfont,
   breaklines, breakanywhere]{file.py}`.
+- **`\todo` уже визначено класом** (червона заглушка, яку рахує `just check`). Пакет
+  `todonotes` визначає свій `\todo` — разом вони конфліктують; `todonotes` не підключати.
+- **VS Code / LaTeX Workshop.** Типовий рецепт передає `-outdir`, і файли опиняються не в
+  `build/`, звідки титул бере числа. Шаблони несуть `.vscode/settings.json` з рецептом
+  `latexmk -cd` без `-outdir`.
 - **`\codefile` уже визначено класом** (заголовок лістингу в тексті програми). Своя команда з
   такою назвою — «Command \codefile already defined»; назвати інакше.
 - **Попередження `Missing character ... in font cmmi`** — кирилиця в математичному режимі

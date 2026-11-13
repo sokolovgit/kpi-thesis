@@ -11,7 +11,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-ERR, WARN = "error", "warning"
+ERR, WARN = "помилка", "попередження"
+CODE_ENVS = r"(?:lstlisting|verbatim|Verbatim|BVerbatim|LVerbatim|minted)\*?"
 issues = []
 todos = {}  # file -> line numbers with \todo
 
@@ -22,6 +23,13 @@ def report(level, where, msg):
 
 def strip_comments(text):
     return re.sub(r"(?<!\\)%.*", "", text)
+
+
+def resolve_input(parent, name):
+    child = parent / name
+    if child.is_file():
+        return child
+    return child if name.endswith(".tex") else parent / f"{name}.tex"
 
 
 def load(path, seen=None):
@@ -35,10 +43,7 @@ def load(path, seen=None):
     for n, raw in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
         line = strip_comments(raw)
         for m in re.finditer(r"\\(?:input|include)\{([^}]+)\}", line):
-            child = path.parent / m.group(1)
-            if child.suffix != ".tex":
-                child = child.with_suffix(".tex")
-            rows.extend(load(child, seen))
+            rows.extend(load(resolve_input(path.parent, m.group(1).strip()), seen))
         rows.append((path, n, line))
     return rows
 
@@ -86,13 +91,17 @@ def check_bibliography(rows, root):
     cite_keys = [k for k, _ in cites]
     for key, row in cites:
         if key not in bib_keys:
-            report(ERR, loc(row, root), f"\\cite{{{key}}} has no \\bibitem")
+            report(
+                ERR,
+                loc(row, root),
+                f"\\cite{{{key}}} немає у списку джерел (\\bibitem)",
+            )
     for key, row in bib:
         if key not in cite_keys:
             report(
                 ERR,
                 loc(row, root),
-                f"source «{key}» is never cited (every source must be cited)",
+                f"на джерело «{key}» немає посилання в тексті (кожне джерело має бути процитоване)",
             )
     order = [k for k in bib_keys if k in cite_keys]
     expected = [k for k in cite_keys if k in bib_keys]
@@ -103,8 +112,8 @@ def check_bibliography(rows, root):
                 report(
                     ERR,
                     loc(row, root),
-                    f"sources not in order of first citation: position {i + 1} is «{a}», "
-                    f"but «{b}» is cited first",
+                    f"джерела не в порядку першої згадки: на місці {i + 1} стоїть «{a}», "
+                    f"а першим згадано «{b}»",
                 )
                 break
 
@@ -144,11 +153,7 @@ def check_refs(rows, root):
     for key, row, kind in labels:
         if key not in refs:
             word = "рисунок" if kind == "figure" else "таблицю"
-            report(
-                ERR,
-                loc(row, root),
-                f"{kind} «{key}» is never referenced (потрібне посилання на {word})",
-            )
+            report(ERR, loc(row, root), f"на {word} «{key}» немає посилання в тексті")
 
 
 def check_text(rows, root, is_note):
@@ -158,9 +163,9 @@ def check_text(rows, root, is_note):
         text = row[2]
         if "\\begin{thebibliography}" in text:
             in_bib = True
-        if re.search(r"\\begin\{(lstlisting|verbatim)\}", text):
+        if re.search(rf"\\begin\{{{CODE_ENVS}\}}", text):
             in_code = True
-        if re.search(r"\\end\{(lstlisting|verbatim)\}", text):
+        if re.search(rf"\\end\{{{CODE_ENVS}\}}", text):
             in_code = False
             continue
         if in_code:
@@ -170,17 +175,17 @@ def check_text(rows, root, is_note):
                 report(
                     WARN,
                     loc(row, root),
-                    f"{m.group(1)}[{m.group(2)}] may float away from its text; drop the option (H is the default)",
+                    f"{m.group(1)}[{m.group(2)}] може відплисти від свого тексту; приберіть параметр (типово H)",
                 )
         if re.search(r"(^|[^\w])[Дд]е\s*:", text) and not in_bib:
             report(
                 ERR,
                 loc(row, root),
-                "«де:» — the explanation after a formula starts with «де» without a colon (use \\begin{where})",
+                "«де:» — пояснення після формули починається з «де» без двокрапки (\\begin{where})",
             )
-        if "—" in text and not in_bib:
+        if ("—" in text or re.search(r"(?<!-)---(?!-)", text)) and not in_bib:
             report(
-                WARN, loc(row, root), "em dash «—»: use the en dash «–» (`--` in LaTeX)"
+                WARN, loc(row, root), "довге тире: потрібне коротке «–» (`--` у LaTeX)"
             )
         if not in_bib:
             plain = re.sub(
@@ -190,8 +195,15 @@ def check_text(rows, root, is_note):
             )
             plain = re.sub(r"\$[^$]*\$", " ", plain)
             # Only quantities (percent or a unit after the number): «1.2» alone is usually a section/figure/ID.
-            for m in re.finditer(r"(?<![\w.\\-])(\d+)\.(\d+)(?=(?:\s|~|\\,)*(?:\\?%|(?:с|мс|хв|год|кг|т|г|грн|USD|ГБ|МБ|КБ|Гб|Мб|км|м|см|мм|пікс|кадр\w*|раз\w*)(?![\w]))|(?:\s|~)+(?:відсот\w*|секунд\w*|хвилин\w*|разу|рази))", plain):
-                report(WARN, loc(row, root), f"«{m.group(0)}» — decimal separator in Ukrainian text is a comma ({m.group(1)},{m.group(2)})")
+            for m in re.finditer(
+                r"(?<![\w.\\-])(\d+)\.(\d+)(?=(?:\s|~|\\,)*(?:\\?%|(?:с|мс|хв|год|кг|т|г|грн|USD|ГБ|МБ|КБ|Гб|Мб|км|м|см|мм|пікс|кадр\w*|раз\w*)(?![\w]))|(?:\s|~)+(?:відсот\w*|секунд\w*|хвилин\w*|разу|рази))",
+                plain,
+            ):
+                report(
+                    WARN,
+                    loc(row, root),
+                    f"«{m.group(0)}» — у десяткових дробах кома: {m.group(1)},{m.group(2)}",
+                )
         if re.search(r"\\todo\{", text):
             todos.setdefault(row[0], []).append(row[1])
         if is_note:
@@ -203,7 +215,9 @@ def check_text(rows, root, is_note):
     for title, row, has in sections:
         if not has:
             report(
-                WARN, loc(row, root), f"chapter «{title}» has no «Висновки до розділу»"
+                WARN,
+                loc(row, root),
+                f"розділ «{title}» без підрозділу «Висновки до розділу»",
             )
 
 
@@ -215,7 +229,7 @@ def check_log(doc, root):
         report(
             WARN,
             str(doc.relative_to(root)),
-            "not built yet (no .log) — run `just build`",
+            "ще не зібрано (немає .log) — запустіть `just build`",
         )
         return
     text = log.read_text(encoding="utf-8", errors="replace")
@@ -227,19 +241,19 @@ def check_log(doc, root):
         report(
             WARN,
             str(log.relative_to(root)),
-            f"{len(big)} line(s) stick out past the margin, worst {max(big):.1f}pt (search the log for «Overfull»)",
+            f"рядків, що виходять за поле: {len(big)}, найбільше на {max(big):.1f}pt (шукайте «Overfull» у журналі)",
         )
     for key in sorted(set(re.findall(r"Reference `([^']+)' on page", text))):
-        report(ERR, str(log.relative_to(root)), f"undefined reference «{key}»")
+        report(ERR, str(log.relative_to(root)), f"невизначене посилання «{key}»")
     for key in sorted(set(re.findall(r"Citation `([^']+)' on page", text))):
-        report(ERR, str(log.relative_to(root)), f"undefined citation «{key}»")
+        report(ERR, str(log.relative_to(root)), f"невизначене джерело «{key}»")
     for name in sorted(set(re.findall(r"File `([^']+)' not found", text))):
-        report(ERR, str(log.relative_to(root)), f"missing file «{name}»")
+        report(ERR, str(log.relative_to(root)), f"не знайдено файл «{name}»")
     if "Rerun to get" in text or "Label(s) may have changed" in text:
         report(
             WARN,
             str(log.relative_to(root)),
-            "needs another LaTeX run (references may be stale)",
+            "потрібен ще один прохід LaTeX (посилання можуть бути застарілі)",
         )
 
 
@@ -267,9 +281,12 @@ def check_annotations(root):
         return
     pages = [p for p in pages if p.strip()]
     if len(pages) != 6:
-        report(WARN, "title/build/title.pdf",
-               f"{len(pages)} pages; expected 6 (title 1, assignment 2, annotations 2, Відомість 1) — "
-               "shorten the assignment items so it fits one sheet printed on both sides")
+        report(
+            WARN,
+            "title/build/title.pdf",
+            f"сторінок: {len(pages)}, очікується 6 (титул 1, завдання 2, анотації 2, відомість 1) — "
+            "скоротіть пункти завдання, щоб воно вмістилося на одному аркуші з двох боків",
+        )
     for page in pages:
         for head, kw in (("АНОТАЦІЯ", "КЛЮЧОВІ СЛОВА"), ("ABSTRACT", "KEYWORDS")):
             if re.search(rf"^\s*{head}\s*$", page, re.M):
@@ -280,13 +297,13 @@ def check_annotations(root):
                     report(
                         ERR,
                         "title/build/title.pdf",
-                        f"{head}: {len(body)} characters, the limit is 1000 (guide §5.3)",
+                        f"{head}: {len(body)} знаків, межа — 1000 (методичка §5.3)",
                     )
                 if "??" in body:
                     report(
                         WARN,
                         "title/build/title.pdf",
-                        f"{head}: «??» counts — build the other documents first (`just all`)",
+                        f"{head}: «??» замість чисел — спершу зберіть інші документи (`just all`)",
                     )
                 keywords = page.split(kw, 1)[1] if kw in page else ""
                 n = len(
@@ -298,7 +315,9 @@ def check_annotations(root):
                 )
                 if kw in page and not 3 <= n <= 10:
                     report(
-                        WARN, "title/build/title.pdf", f"{kw}: {n} keywords, expected 3–10"
+                        WARN,
+                        "title/build/title.pdf",
+                        f"{kw}: ключових слів {n}, потрібно 3–10",
                     )
 
 
@@ -321,30 +340,35 @@ def check_volume(root):
     if None in (intro, ch1, concl):
         return
     intro_pages, main_pages = ch1 - intro, concl - ch1
+    pdf = "explanatory-note/build/explanatory-note.pdf"
     if intro_pages > 4:
-        report(WARN, "explanatory-note/build/explanatory-note.pdf", f"ВСТУП takes {intro_pages} pages, the limit is 4")
+        report(WARN, pdf, f"ВСТУП займає {intro_pages} с., межа — 4")
     if not 60 <= main_pages <= 70:
-        report(
-            WARN,
-            "explanatory-note/build/explanatory-note.pdf",
-            f"main part is {main_pages} pages, the guide recommends 60–70",
-        )
+        report(WARN, pdf, f"основна частина — {main_pages} с., методичка радить 60–70")
     if ch2 and main_pages and (ch2 - ch1) / main_pages > 0.30:
         report(
             WARN,
-            "explanatory-note/build/explanatory-note.pdf",
-            f"chapter 1 is {100 * (ch2 - ch1) // main_pages}% of the main part, the limit is 30%",
+            pdf,
+            f"розділ 1 — {100 * (ch2 - ch1) // main_pages}% основної частини, межа — 30%",
         )
 
 
 def stats(root):
-    for f in sorted([*root.glob("*.kpistats"), *root.glob("*/*.kpistats"), *root.glob("*/build/*.kpistats"), *root.glob("build/*.kpistats")]):
+    for f in sorted(
+        [
+            *root.glob("*.kpistats"),
+            *root.glob("*/*.kpistats"),
+            *root.glob("*/build/*.kpistats"),
+            *root.glob("build/*.kpistats"),
+        ]
+    ):
         vals = dict(re.findall(r"\\kpistat\{(\w+)\}\{(\d+)\}", f.read_text()))
         print(f"{f.stem:17} " + "  ".join(f"{k} {v}" for k, v in vals.items()))
 
 
 def main(argv):
-    sys.stdout.reconfigure(encoding="utf-8")
+    issues.clear()
+    todos.clear()
     show_stats = "--stats" in argv
     args = [a for a in argv if not a.startswith("--")]
     root = Path(args[0] if args else ".").resolve()
@@ -353,7 +377,7 @@ def main(argv):
         return 0
     docs = find_documents(root)
     if not docs:
-        print(f"no LaTeX documents found in {root}")
+        print(f"не знайдено документів LaTeX у {root}")
         return 1
     for doc in docs:
         rows = load(doc)
@@ -369,22 +393,22 @@ def main(argv):
             report(
                 WARN,
                 str(doc.relative_to(root)),
-                "doesn't \\input{../meta.tex} — codes and names may drift",
+                "не підключає \\input{../meta.tex} — шифри й імена можуть розійтися",
             )
         for row in rows:
             if row[0].name != "meta.tex" and re.search(r"КПІ\.[А-ЯІ]{2}-\d", row[2]):
                 report(
                     WARN,
                     loc(row, root),
-                    "hard-coded document code; use \\kpiCode{...} from meta.tex",
+                    "шифр документа вписано вручну; використайте \\kpiCode{...} з meta.tex",
                 )
     check_annotations(root)
     check_volume(root)
     for path, lines in todos.items():
         lines = sorted(set(lines))
         where = loc((path, lines[0], ""), root)
-        more = f" (lines {', '.join(map(str, lines))})" if len(lines) > 1 else ""
-        report(ERR, where, f"{len(lines)} \\todo placeholder(s) left{more}")
+        more = f" (рядки {', '.join(map(str, lines))})" if len(lines) > 1 else ""
+        report(ERR, where, f"заглушок \\todo: {len(lines)}{more}")
     seen = set()
     issues[:] = [i for i in issues if not (i in seen or seen.add(i))]
 
@@ -392,10 +416,11 @@ def main(argv):
     for level, where, msg in issues:
         print(f"{where}: {level}: {msg}")
     print(
-        f"\n{len(errors)} error(s), {len(issues) - len(errors)} warning(s) in {len(docs)} document(s)"
+        f"\nпомилок: {len(errors)}, попереджень: {len(issues) - len(errors)}, документів: {len(docs)}"
     )
     return 1 if errors else 0
 
 
 if __name__ == "__main__":
+    sys.stdout.reconfigure(encoding="utf-8")
     sys.exit(main(sys.argv[1:]))

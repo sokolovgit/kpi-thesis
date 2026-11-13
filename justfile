@@ -12,14 +12,32 @@ install:
     #!/usr/bin/env bash
     set -euo pipefail
     texmf=$(kpsewhich -var-value TEXMFHOME)
+    dest="$texmf/tex/latex/kpi-thesis"
     mkdir -p "$texmf/tex/latex"
-    rm -rf "$texmf/tex/latex/kpi-thesis"
-    ln -s "{{ROOT}}/tex" "$texmf/tex/latex/kpi-thesis"
+    case "$(uname -s)" in
+      MINGW*|MSYS*|CYGWIN*)
+        # Git Bash's ln -s copies; a junction needs no admin rights and follows git pull.
+        # rmdir drops a junction without touching its target.
+        [ -e "$dest" ] && { cmd //c rmdir "$(cygpath -w "$dest")" 2>/dev/null || rm -rf "$dest"; }
+        if ! cmd //c mklink /J "$(cygpath -w "$dest")" "$(cygpath -w "{{ROOT}}/tex")" >/dev/null; then
+          cp -R "{{ROOT}}/tex" "$dest"
+          echo "{{ROOT}}" > "$dest/.repo"
+          echo "junction failed, class copied: rerun 'just install' after every git pull"
+        fi ;;
+      *)
+        rm -rf "$dest"
+        ln -s "{{ROOT}}/tex" "$dest" ;;
+    esac
     kpsewhich kpi-thesis.cls
 
 # Прибрати клас з TEXMFHOME
 uninstall:
-    rm -rf "$(kpsewhich -var-value TEXMFHOME)/tex/latex/kpi-thesis"
+    #!/usr/bin/env bash
+    dest="$(kpsewhich -var-value TEXMFHOME)/tex/latex/kpi-thesis"
+    case "$(uname -s)" in
+      MINGW*|MSYS*|CYGWIN*) cmd //c rmdir "$(cygpath -w "$dest")" 2>/dev/null || rm -rf "$dest" ;;
+      *) rm -rf "$dest" ;;
+    esac
 
 # Скіл без плагіна: симлінк у ~/.claude/skills (не разом із плагіном)
 install-skill:
@@ -34,7 +52,7 @@ new kind dir:
     mkdir -p "$(dirname "{{dir}}")"
     cp -R "{{ROOT}}/templates/{{kind}}" "{{dir}}"
     { printf "KPI := '%s'\n" "{{ROOT}}"; tail -n +2 "{{ROOT}}/templates/{{kind}}/justfile"; } > "{{dir}}/justfile"
-    @echo "-> {{dir}}: fill {{ if kind == 'diploma' { 'meta.tex' } else { 'main.tex' } }}, then \`just all\`"
+    @echo "-> {{dir}}: заповніть {{ if kind == 'diploma' { 'meta.tex' } else { 'шапку main.tex' } }}, далі \`just all\`"
 
 # Зібрати шаблони в тимчасовій папці й прогнати check
 test:
@@ -44,14 +62,13 @@ test:
     for kind in diploma coursework; do
       just new $kind "$tmp/$kind" >/dev/null 2>&1
       if ! log=$(cd "$tmp/$kind" && just all 2>&1); then
-        echo "$log" | tail -40; echo "$kind: build failed in $tmp/$kind"; exit 1
+        echo "$log" | tail -40; echo "$kind: збірка впала, див. $tmp/$kind"; exit 1
       fi
-      echo "$kind: built"
       out=$(cd "$tmp/$kind" && just check 2>/dev/null || true)
-      echo "$out" | tail -1
       # a fresh template may only fail on its \todo placeholders
-      if echo "$out" | grep ': error:' | grep -vq 'placeholder'; then
-        echo "$out" | grep ': error:' | grep -v 'placeholder'; exit 1
+      if echo "$out" | grep ': помилка:' | grep -vq 'заглушок'; then
+        echo "$out" | grep ': помилка:' | grep -v 'заглушок'; echo "$kind: check знайшов помилки"; exit 1
       fi
+      echo "$kind: зібрано, check без помилок (крім заглушок \todo — у свіжому шаблоні це норма)"
     done
-    echo "output: $tmp"
+    echo "OK. PDF шаблонів: $tmp"

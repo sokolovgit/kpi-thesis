@@ -33,7 +33,8 @@ with a normcontrol linter and a Claude Code plugin. Docs are in Ukrainian.*
 - **шрифти Times New Roman і Courier New**;
 - [**just**](https://github.com/casey/just) — запуск команд;
 - **Python 3** — для `just check`;
-- **poppler** (`pdfunite`, `pdftotext`) — зведений PDF диплома й перевірка анотації.
+- **poppler** (`pdfunite`, `pdftotext`) — необов'язково: швидше зведення PDF диплома і
+  перевірки анотації та обсягу за готовим PDF.
 
 <details open>
 <summary><b>macOS</b></summary>
@@ -43,6 +44,7 @@ brew install --cask mactex-no-gui
 brew install just poppler
 ```
 
+MacTeX — це `.pkg`: інсталятор попросить пароль і займе кілька ГБ (10–20 хв).
 Times New Roman і Courier New у macOS уже є.
 </details>
 
@@ -65,10 +67,10 @@ sudo apt install texlive-xetex texlive-latex-extra texlive-fonts-recommended \
 1. [TeX Live](https://tug.org/texlive/windows.html) (MiKTeX теж збере, але `just install`
    розрахований на TeX Live).
 2. [Git for Windows](https://git-scm.com/download/win) — рецепти `just` виконуються в Git Bash.
-3. `winget install Casey.Just Python.Python.3.12` і poppler (`scoop install poppler`).
+3. `winget install Casey.Just`, потім `winget install Python.Python.3.12`.
 
-Times New Roman і Courier New у Windows уже є. Команди нижче — у Git Bash. Без симлінків
-`just install` копіює клас, тож після `git pull` його треба запустити ще раз.
+Times New Roman і Courier New у Windows уже є. Команди нижче — у Git Bash. `just install`
+робить junction (права адміністратора не потрібні), тож `git pull` одразу оновлює клас.
 Альтернатива — WSL з інструкцією для Linux.
 </details>
 
@@ -78,7 +80,7 @@ Times New Roman і Courier New у Windows уже є. Команди нижче �
 git clone https://github.com/sokolovgit/kpi-thesis ~/kpi-thesis
 cd ~/kpi-thesis
 just install        # клас стає видимим для TeX (TEXMFHOME)
-just test           # необов'язково: збирає обидва шаблони
+just test           # необов'язково: збирає обидва шаблони, має закінчитися рядком OK
 ```
 
 ### Плагін для Claude Code
@@ -97,7 +99,11 @@ just test           # необов'язково: збирає обидва ша�
 
 Скіл вмикається сам, коли йдеться про диплом, курсову чи нормоконтроль, або командою
 `/kpi-thesis:kpi-thesis`. Клас плагін не ставить — потрібні кроки вище; якщо їх не зроблено,
-Claude запропонує клонувати репозиторій. Оновлення: `/plugin marketplace update kpi-thesis`.
+Claude проведе через встановлення.
+
+Плагін і клас оновлюються окремо: скіл — `/plugin marketplace update kpi-thesis` (або
+увімкніть auto-update у `/plugin` → Marketplaces), клас — `git pull` у клоні. Скіл сам
+підкаже, якщо клон відстає. Що змінилося — у [CHANGELOG](CHANGELOG.md).
 
 Без плагіна: `just install-skill` робить симлінк скіла в `~/.claude/skills` з клону, тоді
 скіл оновлюється разом із `git pull`. Обидва способи разом не вмикайте.
@@ -109,27 +115,24 @@ cd ~/kpi-thesis
 just new diploma ~/kpi/diploma      # або: just new coursework ~/kpi/coursework
 cd ~/kpi/diploma
 $EDITOR meta.tex                    # тема, ПІБ, група, наказ, дати
-just all                            # усі документи → build/<OUT>.pdf
+just all                            # усі документи → build/<Прізвище>_<група>.pdf
 just check                          # перевірки нормоконтролю
 ```
 
 Усередині роботи: `just build explanatory-note` — один документ, `just watch explanatory-note` — перезбирання при
 збереженні, `just stats` — числа для анотації, `just clean` — прибрати проміжні файли.
 
-Свій текст пишіть у `explanatory-note/chapters/*.tex`, картинки кладіть у `media/`. Основні команди класу:
+Ім'я зведеного PDF береться з `meta.tex` (прізвище зі `student-stamp` і `group`); у курсовій —
+із шапки `main.tex`.
 
-| Що | Як |
-|---|---|
-| Структурний елемент без номера | `\structural{ВСТУП}` |
-| Таблиця з «Продовження таблиці N» | `\begin{kpitable}{|p{4cm}|p{10cm}|}{Назва\label{tab:key}}{\textbf{А} & \textbf{Б}} … \end{kpitable}` |
-| Пояснення до формули | `\begin{where} M & маса, кг; \\ F & сила, Н. \end{where}` |
-| Додатки | `\appendices`, далі `\appendix{Назва}` або `\appendixpdf{Звіт подібності}{../media/report.pdf}` (шлях від файлу документа) |
-| Лістинг у тексті програми | `\codefile{path}{задача}` + `\lstinputlisting{../../repo/file}` |
-| Аркуш А3 | `\diagramPage{ССВ}{Назва схеми}{file.png}` |
-| Заглушка | `\todo{...}` — червона в PDF, `just check` її рахує |
-
-Повніший довідник — [`skills/kpi-thesis/SKILL.md`](skills/kpi-thesis/SKILL.md), граблі —
+Свій текст пишіть у `explanatory-note/chapters/*.tex`, картинки кладіть у `media/`. Таблиці з
+«Продовження таблиці N» — `kpitable`, пояснення до формул — `where`, заглушки — `\todo{...}`
+(червоні в PDF, `just check` їх рахує). Усі команди класу — у
+[`SKILL.md`](skills/kpi-thesis/SKILL.md#команди-класу), граблі — у
 [`gotchas.md`](skills/kpi-thesis/references/gotchas.md).
+
+Шаблони мають налаштування для VS Code (LaTeX Workshop) і Zed: збірка з кнопки редактора
+йде тим самим `latexmk`, що й `just`.
 
 ## Джерела вимог
 
@@ -169,14 +172,15 @@ just check                          # перевірки нормоконтро�
 | `tex/kpi-graphics.sty` | аркуші А3 зі штампом ЄСКД |
 | `templates/diploma/` | `meta.tex` + документи диплома: `title` (титул, завдання, анотації, відомість), `specification` (ТЗ), `explanatory-note` (ПЗ), `source-code` (текст програми), `test-plan` (ПМТ), `user-manual` (КК), `graphics` (графічний матеріал) |
 | `templates/coursework/` | курсова, один документ |
-| `scripts/check.py` | лінтер нормоконтролю |
+| `scripts/check.py` | лінтер нормоконтролю (`tests/` — його тести) |
 | `skills/kpi-thesis/` | скіл Claude Code: процес, правила, вимоги з номерами пунктів, граблі |
 | `.claude-plugin/` | маніфест плагіна й маркетплейсу |
 
 ## Участь
 
 Знайшли розбіжність з методичкою чи зауваження нормоконтролю, якого клас не враховує, —
-відкрийте issue або PR. Перед PR запустіть `just test`.
+відкрийте issue або PR. Перед PR запустіть `just test` і `python3 -m unittest discover -s tests`
+(тести `check.py`, TeX не потрібен).
 
 ## Автори
 
@@ -185,5 +189,5 @@ just check                          # перевірки нормоконтро�
 
 ## Ліцензія
 
-[MIT](LICENSE). Роботи, написані за шаблонами, — ваші: зберігати в них ліцензійне повідомлення
-не потрібно.
+[MIT](LICENSE); `templates/` — додатково під MIT-0. Роботи, написані за шаблонами, — ваші:
+зберігати в них ліцензійне повідомлення не потрібно.

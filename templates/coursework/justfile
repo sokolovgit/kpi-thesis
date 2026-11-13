@@ -1,6 +1,6 @@
 KPI := '@KPI_THESIS@'
-# Ім'я PDF для здачі
-OUT := 'Прізвище_ІП-XX_курсова'
+# Ім'я PDF для здачі — з шапки main.tex: <прізвище зі student>_<group>_курсова
+OUT := `sed -nE 's/^ *student *= *\{(\\todo\{)?([^ ~}]+).*/\2/p' main.tex | head -n1` + '_' + `sed -nE 's/^ *group *= *\{([^}]*)\}.*/\1/p' main.tex | head -n1` + '_курсова'
 
 export PATH := if path_exists('/Library/TeX/texbin') == "true" { '/Library/TeX/texbin:' + env('PATH') } else { env('PATH') }
 # check.py prints Cyrillic; Windows consoles default to a legacy code page.
@@ -14,7 +14,7 @@ default:
 build:
     latexmk -silent main.tex
 
-# Зібрати й скопіювати в build/OUT.pdf
+# Зібрати й скопіювати в build/<OUT>.pdf
 all: build
     cp build/main.pdf "build/{{OUT}}.pdf"
     @echo "-> build/{{OUT}}.pdf"

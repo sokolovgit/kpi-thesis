@@ -3,7 +3,7 @@
 % the department guide «Дипломний проєкт: ... вимоги до структури, змісту та оформлення» (2024).
 % Compile with XeLaTeX.
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesClass{kpi-thesis}[2026/11/08 v1.0 KPI FICE thesis documents]
+\ProvidesClass{kpi-thesis}[2026/11/13 v1.1 KPI FICE thesis documents]
 
 \newif\ifkpi@coursework
 \DeclareOption{diploma}{\kpi@courseworkfalse}
