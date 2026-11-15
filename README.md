@@ -121,7 +121,8 @@ just check                          # перевірки нормоконтро�
 ```
 
 Усередині роботи: `just build explanatory-note` — один документ, `just watch explanatory-note` — перезбирання при
-збереженні, `just stats` — числа для анотації, `just clean` — прибрати проміжні файли.
+збереженні, `just stats` — числа для анотації, `just clean` — прибрати `build/` разом із PDF,
+`just clean-aux` — лише проміжні файли, `just freeze` — заморозити версію класу для роботи на здачі.
 
 Ім'я зведеного PDF береться з `meta.tex` (прізвище зі `student-stamp` і `group`); у курсовій —
 із шапки `main.tex`.

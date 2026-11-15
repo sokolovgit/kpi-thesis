@@ -13,6 +13,7 @@ from pathlib import Path
 
 ERR, WARN = "помилка", "попередження"
 CODE_ENVS = r"(?:lstlisting|verbatim|Verbatim|BVerbatim|LVerbatim|minted)\*?"
+MATH_ENVS = r"(?:equation|align|gather|multline|eqnarray|flalign|alignat)\*?"
 issues = []
 todos = {}  # file -> line numbers with \todo
 
@@ -183,7 +184,7 @@ def check_refs(rows, root):
 
 
 def check_text(rows, root, is_note):
-    in_bib = in_code = False
+    in_bib = in_code = in_math = False
     in_body = not any("\\begin{document}" in r[2] for r in rows)
     sections = []
     for row in rows:
@@ -197,6 +198,13 @@ def check_text(rows, root, is_note):
             continue
         if in_code:
             continue
+        if re.search(rf"\\begin\{{{MATH_ENVS}\}}|(?<!\\)\\\[", text):
+            in_math = True
+        math_line = in_math or "$$" in text
+        if re.search(rf"\\end\{{{MATH_ENVS}\}}|(?<!\\)\\\]", text):
+            in_math = False
+        if text.count("$$") % 2:
+            in_math = not in_math
         if not in_body:
             in_body = "\\begin{document}" in text
             if re.search(r"\\todo\{", text):
@@ -221,6 +229,10 @@ def check_text(rows, root, is_note):
             )
         if re.search(r"(?:[+=<>-]|\\cdot|\\times)\s*\\ldots|\\ldots\s*(?:[+=<>-]|\\cdot|\\times)", text):
             report(WARN, loc(row, root), "\\ldots між знаками операцій: потрібне \\cdots (a_1 + \\cdots + a_n)")
+        if re.search(r"\((?:\s*|[^()]*(?:формул\w*|див\.)[^()]*)\\eqref\{", text):
+            report(WARN, loc(row, root), "посилання на формулу в дужках дає «((2.8))»: «за формулою (2.8)» без зовнішніх дужок")
+        elif not math_line and re.search(r"\([^()]*\([^()]*\)(?:[^()]|\([^()]*\))*\)", re.sub(r"\$([^$]*)\$", r"\1", text)):
+            report(WARN, loc(row, root), "дужки в дужках: перефразуйте або замініть зовнішні дужки комами чи тире")
         if re.search(r"[^\s~(\[{]\s+\\(?:ref|eqref)\{", text):
             report(WARN, loc(row, root), "перед \\ref — звичайний пробіл: номер може перенестися на новий рядок (рисунок~\\ref{...})")
         if not in_bib and row[0].name != "meta.tex" and not re.match(r"\s*(?:\\kpiset|[a-z-]+\s*=)", text):
@@ -431,6 +443,15 @@ def check_volume(doc, root, limits):
 NUM = r"([А-ЯA-Z]?\d*\.?\d+|[А-ЯA-Z]\.\d+)"
 
 
+def expand_range(a, b):
+    """«4.2–4.5» -> 4.2 4.3 4.4 4.5; a single number or a cross-chapter range stays as it is."""
+    if b and "." in a and "." in b:
+        (p1, x), (p2, y) = a.rsplit(".", 1), b.rsplit(".", 1)
+        if p1 == p2 and x.isdigit() and y.isdigit():
+            return [f"{p1}.{k}" for k in range(int(x), int(y) + 1)]
+    return [a]
+
+
 def check_placement(doc, root):
     """ДСТУ 3008: a figure or table goes after its first mention, on that page or the next."""
     pages = pdf_pages_text(doc_pdf(doc))
@@ -446,15 +467,12 @@ def check_placement(doc, root):
         text = re.sub(r"Продовження\s+таблиці\s+\S+", " ", text)
         text = re.sub(r"-\n\s*", "", text)
         text = re.sub(r"\s+", " ", text)
-        for m in re.finditer(rf"(?i)(?<!\w)(рис(?:ун\w*|\.)|табл(?:иц\w*|\.))\s*{NUM}(?:\s*[–-]\s*{NUM})?", text):
+        item = rf"{NUM}(?:\s*[–-]\s*{NUM})?"
+        for m in re.finditer(rf"(?i)(?<!\w)(рис(?:ун\w*|\.)|табл(?:иц\w*|\.))\s*({item}(?:\s*(?:,|і|й|та)\s*{item})*)", text):
             kind = "Р" if m.group(1).lower().startswith("рис") else "Т"
-            nums = [m.group(2)]
-            if m.group(3) and "." in m.group(2) and "." in m.group(3):
-                (p1, a), (p2, b) = m.group(2).rsplit(".", 1), m.group(3).rsplit(".", 1)
-                if p1 == p2 and a.isdigit() and b.isdigit():
-                    nums = [f"{p1}.{k}" for k in range(int(a), int(b) + 1)]
-            for num in nums:
-                mentioned.setdefault((kind, num), i)
+            for one in re.finditer(item, m.group(2)):
+                for num in expand_range(one.group(1), one.group(2)):
+                    mentioned.setdefault((kind, num), i)
     for (kind, num), c in sorted(placed.items(), key=lambda x: x[1]):
         m = mentioned.get((kind, num))
         if m is None or not num[0].isdigit():  # appendix objects live in their appendix
@@ -464,6 +482,31 @@ def check_placement(doc, root):
             report(WARN, where, f"{name} — на с. {c + 1}, а вперше згадана на с. {m + 1}: має стояти на тій самій або наступній сторінці")
         elif c < m:
             report(WARN, where, f"{name} — на с. {c + 1}, раніше за першу згадку (с. {m + 1})")
+
+
+HEADING = r"^\s*(?:\d+\s+)?[А-ЯІЇЄҐA-Z][А-ЯІЇЄҐA-Z0-9’'«»,:()\- –]{4,}\s*$"
+
+
+def check_short_pages(doc, root):
+    """A section that spills 1–3 lines onto its last page costs a whole page of volume."""
+    pages = pdf_pages_text(doc_pdf(doc))
+    if not pages:
+        return
+    where = str(doc_pdf(doc).relative_to(root))
+
+    def lines(page):
+        return [s for s in page.splitlines() if s.strip() and not re.fullmatch(r"\s*\d+\s*", s)]
+
+    for i in range(1, len(pages) - 1):
+        body, nxt = lines(pages[i]), lines(pages[i + 1])
+        if (
+            1 <= len(body) <= 3
+            and not re.match(HEADING, body[0])
+            and nxt
+            and re.match(HEADING, nxt[0])
+            and not any(re.match(r"\s*(Рисунок|Таблиця)\s", s) or re.search(r"(?:\. ?){4}", s) for s in body)
+        ):
+            report(WARN, where, f"с. {i + 1}: перед новим розділом лише {len(body)} ряд. тексту — скоротіть розділ на кілька рядків, і він стане на сторінку коротшим")
 
 
 def stats(root):
@@ -501,6 +544,7 @@ def main(argv):
         check_log(doc, root)
         check_volume(doc, root, volume_limits(doc))
         check_placement(doc, root)
+        check_short_pages(doc, root)
         if (
             "meta.tex" not in "".join(r[2] for r in rows if "\\input" in r[2])
             and (root / "meta.tex").exists()
@@ -511,6 +555,9 @@ def main(argv):
                 "не підключає \\input{../meta.tex} — шифри й імена можуть розійтися",
             )
         for row in rows:
+            m = re.search(r"\\(?:(?:re|provide)?newcommand\*?\s*\{?|def\s*)(\\[A-Za-z]+\d\w*)", row[2])
+            if m:
+                report(ERR, loc(row, root), f"«{m.group(1)}»: у імені макросу лише літери, LaTeX прочитає цифри як текст після нього (Missing \\begin{{document}})")
             if row[0].name != "meta.tex" and re.search(r"КПІ\.[А-ЯІ]{2}-\d", row[2]):
                 report(
                     WARN,

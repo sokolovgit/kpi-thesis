@@ -12,7 +12,14 @@ default:
 
 # Зібрати build/main.pdf
 build:
-    latexmk -silent main.tex
+    #!/usr/bin/env bash
+    # latexmk -silent hides LaTeX's errors: show the first ones from the log. Dropping
+    # .fdb_latexmk makes the next run rebuild instead of «gave an error in previous invocation».
+    latexmk -silent main.tex && exit 0
+    rm -f build/main.fdb_latexmk
+    echo "--- помилки з build/main.log:" >&2
+    grep -m5 -A2 -E '^!|^[^ ]+:[0-9]+: ' build/main.log >&2 || echo "(див. журнал)" >&2
+    exit 1
 
 # Зібрати й скопіювати в build/<OUT>.pdf
 all: build
@@ -27,6 +34,16 @@ watch:
 check:
     {{PYTHON}} -I "{{KPI}}/scripts/check.py" .
 
-# Прибрати проміжні файли
+# Прибрати проміжні файли разом із PDF
 clean:
     rm -rf build
+
+# Прибрати лише проміжні файли (після збою чи двох збірок одночасно), PDF лишається
+clean-aux:
+    rm -f build/*.aux build/*.out build/*.toc build/*.fdb_latexmk build/*.fls build/*.xdv
+
+# Заморозити клас для цієї роботи: копія в tex/, git pull у репозиторії класу її не змінює
+freeze:
+    @rm -rf tex && cp -R "{{KPI}}/tex" tex && rm -f tex/.repo
+    @grep -q TEXINPUTS .latexmkrc || printf '%s\n' "ensure_path('TEXINPUTS', './tex//');" >> .latexmkrc
+    @echo "клас заморожено ($(sed -nE 's/.*ProvidesClass\{kpi-thesis\}\[[^ ]+ (v[0-9.]+).*/\1/p' tex/kpi-thesis.cls)); повернути: rm -rf tex"

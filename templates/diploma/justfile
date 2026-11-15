@@ -14,14 +14,25 @@ default:
 
 # Зібрати один документ: just build explanatory-note
 build doc:
-    latexmk -cd -silent {{doc}}/{{doc}}.tex
+    @{{just_executable()}} _tex {{doc}} {{doc}}
+
+# latexmk -silent hides LaTeX's errors: show the first ones from the log. Dropping .fdb_latexmk
+# makes the next run rebuild instead of «gave an error in previous invocation».
+[private]
+_tex dir file *flags:
+    #!/usr/bin/env bash
+    latexmk -cd -silent {{flags}} "{{dir}}/{{file}}.tex" && exit 0
+    rm -f "{{dir}}/build/{{file}}.fdb_latexmk"
+    echo "--- помилки з {{dir}}/build/{{file}}.log:" >&2
+    grep -m5 -A2 -E '^!|^[^ ]+:[0-9]+: ' "{{dir}}/build/{{file}}.log" >&2 || echo "(див. журнал)" >&2
+    exit 1
 
 # Зібрати все й звести в build/<OUT>.pdf (титул збирається останнім — бере числа з інших)
 all:
     #!/usr/bin/env bash
     set -euo pipefail
-    for d in {{DOCS}}; do latexmk -cd -silent $d/$d.tex; done
-    latexmk -cd -silent -g title/title.tex
+    for d in {{DOCS}}; do "{{just_executable()}}" _tex $d $d; done
+    "{{just_executable()}}" _tex title title -g
     mkdir -p build
     pdfs="title/build/title.pdf $(for d in {{DOCS}}; do printf '%s/build/%s.pdf ' $d $d; done)"
     if command -v pdfunite >/dev/null; then
@@ -53,6 +64,16 @@ check:
 stats:
     {{PYTHON}} -I "{{KPI}}/scripts/check.py" --stats .
 
-# Прибрати проміжні файли
+# Прибрати проміжні файли разом із PDF
 clean:
     rm -rf build */build
+
+# Прибрати лише проміжні файли (після збою чи двох збірок одночасно), PDF лишаються
+clean-aux:
+    rm -f */build/*.aux */build/*.out */build/*.toc */build/*.fdb_latexmk */build/*.fls */build/*.xdv
+
+# Заморозити клас для цієї роботи: копія в tex/, git pull у репозиторії класу її не змінює
+freeze:
+    @rm -rf tex && cp -R "{{KPI}}/tex" tex && rm -f tex/.repo
+    @grep -q TEXINPUTS .latexmkrc || printf '%s\n' "ensure_path('TEXINPUTS', '../tex//');" >> .latexmkrc
+    @echo "клас заморожено ($(sed -nE 's/.*ProvidesClass\{kpi-thesis\}\[[^ ]+ (v[0-9.]+).*/\1/p' tex/kpi-thesis.cls)); повернути: rm -rf tex"
