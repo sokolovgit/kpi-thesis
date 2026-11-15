@@ -65,9 +65,7 @@ class CheckTest(unittest.TestCase):
         self.assertIn("на рисунок «fig:x» немає посилання", out)
 
     def test_figure_range_counts_as_reference(self):
-        body = "".join(
-            rf"\begin{{figure}}\label{{fig:{i}}}\end{{figure}}" for i in range(3)
-        )
+        body = "".join(rf"\begin{{figure}}\label{{fig:{i}}}\end{{figure}}" for i in range(3))
         code, out = run(doc(body + r"Рисунки \ref{fig:0}--\ref{fig:2}."))
         self.assertNotIn("немає посилання", out)
 
@@ -104,6 +102,92 @@ class CheckTest(unittest.TestCase):
         files["chapters/1.2-x.tex"] = "Текст — тут.\n"
         code, out = run(files)
         self.assertIn("chapters/1.2-x.tex:1", out)
+
+    def test_cdots_and_ref_tilde(self):
+        code, out = run(doc(r"$b_1 + \ldots + b_5$ і в таблиці \ref{x}."))
+        self.assertIn("потрібне \\cdots", out)
+        self.assertIn("перед \\ref", out)
+        code, out = run(doc(r"$b_1 + \cdots + b_5$ і в таблиці~\ref{x}, (\ref{x})."))
+        self.assertNotIn("\\cdots", out)
+        self.assertNotIn("перед \\ref", out)
+
+    def test_number_grouping(self):
+        code, out = run(doc("Було 4 000 прогонів і 25000 подій, разом 1 000 000."))
+        self.assertIn("«4 000»", out)
+        self.assertIn("«25000»", out)
+        self.assertNotIn("1 000 000", out)
+        code, out = run(doc("Було 4000 прогонів, 25~000 подій, шифр 045440, частка 0,12345."))
+        self.assertNotIn("розряди", out)
+        self.assertNotIn("чотирицифрове", out)
+
+    def test_preamble_is_not_text(self):
+        files = {
+            "main.tex": "\\documentclass{kpi-thesis}\n\\hyphenpenalty=10000\n"
+            "\\kpiset{title = {\\todo{Тема}}}\n\\begin{document}\nТекст.\n\\end{document}\n"
+        }
+        code, out = run(files)
+        self.assertNotIn("розряди", out)
+        self.assertIn("заглушок \\todo: 1", out)
+
+    def test_unreferenced_equation_is_a_warning(self):
+        code, out = run(doc("\\begin{equation}\\label{eq:a} x = 1 \\end{equation}"))
+        self.assertEqual(code, 0, out)
+        self.assertIn("на формулу «eq:a»", out)
+        code, out = run(
+            doc("\\begin{equation}\\label{eq:a} x = 1 \\end{equation} За~\\eqref{eq:a}.")
+        )
+        self.assertNotIn("eq:a", out)
+
+    def test_mention_order(self):
+        figs = r"\begin{figure}\label{fig:a}\end{figure}\begin{figure}\label{fig:b}\end{figure}"
+        code, out = run(doc(r"Див. рисунок~\ref{fig:b}, потім рисунок~\ref{fig:a}." + figs))
+        self.assertIn("згадано раніше за попередню", out)
+        app = r"\appendices\appendix{X}" + figs + r"Рисунки~\ref{fig:b} і~\ref{fig:a}."
+        code, out = run(doc(app))
+        self.assertNotIn("згадано раніше", out)
+
+
+class PdfChecksTest(unittest.TestCase):
+    """Checks that read the built PDF, fed with page texts instead of pdftotext."""
+
+    def run_pdf(self, pages, tex="\\documentclass{kpi-thesis}\n"):
+        orig = check.pdf_pages_text
+        check.pdf_pages_text = lambda pdf: pages
+        try:
+            return run({"main.tex": tex})
+        finally:
+            check.pdf_pages_text = orig
+
+    def test_placement(self):
+        pages = [
+            "як показано на рисунку 1.1 і в таблицях 1.1–1.2",
+            "текст",
+            "Рисунок 1.1 – Схема\n",
+            "Таблиця 1.1 – A\nТаблиця 1.2 – Б\n",
+            "Рисунок 2.1 – Рано\nпро рисунок 2.1",
+        ]
+        code, out = self.run_pdf(pages)
+        self.assertIn("Рисунок 1.1 — на с. 3, а вперше згадана на с. 1", out)
+        self.assertIn("Таблиця 1.2 — на с. 4", out)
+        self.assertNotIn("Рисунок 2.1", out)
+
+    def test_coursework_chapter_pages(self):
+        pages = [
+            "ЗМІСТ\nВСТУП ........ 3",
+            "ВСТУП",
+            "1 АНАЛІЗ ПРЕДМЕТНОЇ ОБЛАСТІ",
+            *["текст"] * 17,
+            "2 ПРОЄКТУВАННЯ",
+            "текст",
+            "ВИСНОВКИ",
+        ]
+        code, out = self.run_pdf(
+            pages, "% check: chapter-pages=3-15\n\\documentclass{kpi-thesis}\n"
+        )
+        self.assertIn("розділ 1, сторінок: 18, за методичкою 3–15", out)
+        self.assertIn("розділ 2, сторінок: 2, за методичкою 3–15", out)
+        code, out = self.run_pdf(pages)
+        self.assertNotIn("розділ 1, сторінок", out)
 
 
 if __name__ == "__main__":

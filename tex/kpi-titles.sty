@@ -1,7 +1,7 @@
 % kpi-titles.sty — title pages, assignment, annotations, project sheet («Відомість»)
 % and document title pages, all filled from \kpiset{...} in the work's meta.tex.
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesPackage{kpi-titles}[2026/11/13 v1.1 KPI FICE thesis title pages]
+\ProvidesPackage{kpi-titles}[2026/11/15 v1.2 KPI FICE thesis title pages]
 
 \ExplSyntaxOn
 \keys_define:nn { kpi }
@@ -17,6 +17,7 @@
     student-dative    .tl_gset:N = \g_kpi_student_dative_tl,
     student-short     .tl_gset:N = \g_kpi_student_short_tl,
     student-stamp     .tl_gset:N = \g_kpi_student_stamp_tl,
+    gradebook         .tl_gset:N = \g_kpi_gradebook_tl,
     advisor           .tl_gset:N = \g_kpi_advisor_tl,
     advisor-full      .tl_gset:N = \g_kpi_advisor_full_tl,
     advisor-short     .tl_gset:N = \g_kpi_advisor_short_tl,
@@ -55,6 +56,8 @@
   }
 \NewDocumentCommand \kpiset { m } { \keys_set:nn { kpi } { #1 } }
 \cs_new:Npn \kpi@ifmale #1#2 { \tl_if_eq:NnTF \g_kpi_gender_tl {f} {#2} {#1} }
+\cs_new:Npn \kpi@gradebook
+  { \tl_if_empty:NTF \g_kpi_gradebook_tl { \sigline{2.5cm} } { \g_kpi_gradebook_tl } }
 
 % Plural form of a Ukrainian noun for a number: \kpiplural{n}{рисунок}{рисунки}{рисунків}.
 \NewExpandableDocumentCommand \kpiplural { m m m m }
@@ -617,6 +620,8 @@
   \kpiStudentWord\ \kpi@g{course} курсу, групи \kpi@g{group}
 
   \kpi@g{student}
+
+  Номер залікової книжки: \kpi@gradebook
 
   \vspace{0.4cm}
   Керівник: \kpi@g{advisor}

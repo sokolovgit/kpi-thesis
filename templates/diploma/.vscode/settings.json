@@ -6,5 +6,8 @@
     { "name": "latexmk-kpi", "command": "latexmk", "args": ["-cd", "-silent", "%DOC%"] }
   ],
   "latex-workshop.latex.outDir": "%DIR%/build",
-  "latex-workshop.latex.autoClean.run": "never"
+  "latex-workshop.latex.autoClean.run": "never",
+  // chktex with the rules from .chktexrc (false alarms for ДСТУ typesetting switched off)
+  "latex-workshop.linting.chktex.enabled": true,
+  "latex-workshop.linting.chktex.exec.args": ["-wall", "-n22", "-n30", "-e16", "-q", "-n1", "-n3", "-n8", "-n9", "-n10", "-n13", "-n17", "-n24", "-n26", "-n27", "-n35", "-n44"]
 }

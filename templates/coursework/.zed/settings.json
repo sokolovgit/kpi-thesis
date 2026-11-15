@@ -1,6 +1,7 @@
 // texlab doesn't link \cite to a \bibitem in another file (every citation in a chapter shows
 // "Undefined reference"), and \bibitem entries always look unused. Broken \ref and \cite are
-// caught by `just check` from the LaTeX log instead.
+// caught by `just check` from the LaTeX log instead. chktex gets the rules from .chktexrc as
+// arguments: texlab runs it in the file's own folder, where .chktexrc isn't found.
 {
   "lsp": {
     "texlab": {
@@ -8,6 +9,10 @@
         "texlab": {
           "diagnostics": {
             "ignoredPatterns": ["^Undefined reference$", "^Unused entry$"]
+          },
+          "chktex": {
+            "onOpenAndSave": true,
+            "additionalArgs": ["-n1", "-n3", "-n8", "-n9", "-n10", "-n13", "-n17", "-n24", "-n26", "-n27", "-n35", "-n44"]
           }
         }
       }

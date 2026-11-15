@@ -3,7 +3,7 @@
 % the department guide «Дипломний проєкт: ... вимоги до структури, змісту та оформлення» (2024).
 % Compile with XeLaTeX.
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesClass{kpi-thesis}[2026/11/13 v1.1 KPI FICE thesis documents]
+\ProvidesClass{kpi-thesis}[2026/11/15 v1.2 KPI FICE thesis documents]
 
 \newif\ifkpi@coursework
 \DeclareOption{diploma}{\kpi@courseworkfalse}
@@ -58,6 +58,8 @@
 \RequirePackage{enumitem}
 \RequirePackage{pdfpages}
 \RequirePackage{listings}
+\RequirePackage{fvextra}
+\RequirePackage{needspace}
 \RequirePackage{xcolor}
 \RequirePackage{cite}
 \RequirePackage{pdftexcmds}
@@ -66,6 +68,8 @@
 
 \setlength{\tabcolsep}{4pt}
 \newcolumntype{Y}{>{\RaggedRight\arraybackslash}X}
+% Flush-left cell that never breaks a word: \begin{kpitable}{|L{4cm}|L{10cm}|}...
+\newcolumntype{L}[1]{>{\RaggedRight\arraybackslash\hyphenpenalty=10000\exhyphenpenalty=10000}p{#1}}
 % media/ first: with latexmk -outdir=build, ../media/ also resolves against build/ and breaks loading.
 \graphicspath{{media/}{../media/}{./}}
 \floatplacement{figure}{H}
@@ -114,6 +118,8 @@
 \fancyhead[R]{\thepage}
 \renewcommand{\headrulewidth}{0pt}
 \setlength{\headheight}{17pt}
+% Follow margins changed in the preamble (\kpisetup{left-margin=...}, \geometry).
+\AtBeginDocument{\setlength{\headwidth}{\textwidth}}
 \pagenumbering{gobble}
 
 % Page 1 is the document's title page; numbering is visible from the page after it.
@@ -148,13 +154,20 @@
 % Long table with the ДСТУ continuation line and repeated header. The \label goes inside
 % the caption so editors (texlab) see it:
 %   \begin{kpitable}{|p{4cm}|p{10cm}|}{Назва\label{tab:key}}{Поле & Опис}  rows  \end{kpitable}
-\NewDocumentEnvironment{kpitable}{m m m}{%
-  \begin{longtable}{#1}
-  \caption{#2}\\
-  \hline #3 \\ \hline
+% The caption and header never stay alone at the bottom of a page: the table starts on a new
+% page unless the header plus [N] more lines fit (default 5: caption and ~3 rows; 0 = off).
+\newsavebox\kpi@tablehead
+\NewDocumentEnvironment{kpitable}{O{5} m m m}{%
+  \ifnum#1>0
+    \sbox\kpi@tablehead{\begin{tabular}{#2}\hline #4 \\ \hline\end{tabular}}%
+    \Needspace{\dimexpr\ht\kpi@tablehead+\dp\kpi@tablehead+#1\baselineskip\relax}%
+  \fi
+  \begin{longtable}{#2}
+  \caption{#3}\\
+  \hline #4 \\ \hline
   \endfirsthead
   \caption*{Продовження таблиці \thetable}\\
-  \hline #3 \\ \hline
+  \hline #4 \\ \hline
   \endhead
 }{%
   \end{longtable}%
@@ -250,9 +263,13 @@
   \refstepcounter{section}%
   \global\advance\c@kpi@appendices\@ne
   \IfValueT{#1}{\label{#1}}%
-  {\centering Додаток \thesection\par\nopagebreak
-   \vspace{0.5\baselineskip}\nopagebreak
-   \textbf{#2}\par}%
+  \ifkpi@appinline
+    {\centering Додаток \thesection.\ \textbf{#2}\par}%
+  \else
+    {\centering Додаток \thesection\par\nopagebreak
+     \vspace{0.5\baselineskip}\nopagebreak
+     \textbf{#2}\par}%
+  \fi
   \addcontentsline{toc}{section}{Додаток \thesection\ #2}%
   \vspace{\baselineskip}%
 }
@@ -280,6 +297,11 @@
   belowskip=0.5\baselineskip,
 }
 \lstset{style=kpicode}
+% listings under XeLaTeX moves punctuation next to Cyrillic in strings and comments, so files
+% go through fvextra: \codeinput[firstline=10, lastline=40]{../../app/main.py}, or the Verbatim
+% environment. Options are \VerbatimInput's; fontsize= overrides the 8 pt default.
+\fvset{fontsize=\setstretch{1}\fontsize{8}{9}\selectfont, breaklines=true, breakanywhere=true}
+\NewDocumentCommand\codeinput{O{} m}{\VerbatimInput[#1]{#2}}
 
 % --- Totals for the annotation and the project sheet («Відомість») ---
 % Each document writes <jobname>.kpistats into its output folder; titles read them back.
@@ -288,13 +310,12 @@
 \newcounter{kpi@sources}
 \newcounter{kpi@appendices}
 % Every numbered caption adds a line to the list of figures/tables (\caption* doesn't).
+% Appendices count too, like their pages do.
 \AddToHook{begindocument/end}{%
   \let\kpi@addcontentsline\addcontentsline
   \def\addcontentsline#1{%
-    \ifkpi@inappendix\else
-      \ifnum\pdf@strcmp{#1}{lof}=0 \stepcounter{kpi@figures}\fi
-      \ifnum\pdf@strcmp{#1}{lot}=0 \stepcounter{kpi@tables}\fi
-    \fi
+    \ifnum\pdf@strcmp{#1}{lof}=0 \stepcounter{kpi@figures}\fi
+    \ifnum\pdf@strcmp{#1}{lot}=0 \stepcounter{kpi@tables}\fi
     \kpi@addcontentsline{#1}}%
 }
 
@@ -331,6 +352,48 @@
   \par\bigskip\noindent\textbf{Файл }\path{#1}\par
   \noindent Реалізація функціональної задачі #2.\par
 }
+
+% --- Where a coursework guide differs from the diploma one: \kpisetup{...} in the preamble ---
+%   left-margin    = 20mm     % default 30 mm (diploma guide)
+%   hyphenation    = false    % no word breaks (also hides the Underfull noise that follows)
+%   enumerate      = arabic   % «1)», nested «а)»; default «а)», nested «1)»
+%   table-caption  = left     % from the left edge; default from the paragraph indent
+%   appendix-title = inline   % «Додаток А. Назва» on one line; default two lines
+%   algorithms                % algorithm + algpseudocode, «Алгоритм 1.1 – Назва» like tables
+\newif\ifkpi@appinline
+\def\kpi@nohyphenation{%
+  \hyphenpenalty=10000 \exhyphenpenalty=10000
+  \emergencystretch=3em \hbadness=10000 }
+\def\kpi@arabiclists{%
+  \setlist[enumerate,1]{label=\arabic*)}%
+  \setlist[enumerate,2]{label=\ukralph*)}}
+\def\kpi@leftcaptions{%
+  \captionsetup*[table]{format=plain, justification=justified, singlelinecheck=false}}
+\def\kpi@algorithms{%
+  \RequirePackage{algorithm}%
+  \RequirePackage[noend]{algpseudocode}%
+  \floatname{algorithm}{Алгоритм}%
+  \floatplacement{algorithm}{H}%
+  \numberwithin{algorithm}{section}%
+  \captionsetup*[algorithm]{labelsep=kpidash, justification=raggedright, singlelinecheck=false}}
+\ExplSyntaxOn
+\keys_define:nn { kpi / setup }
+  {
+    left-margin    .code:n = { \geometry { left = #1 } },
+    hyphenation    .choices:nn = { true, false }
+      { \int_compare:nNnT { \l_keys_choice_int } = { 2 } { \kpi@nohyphenation } },
+    enumerate      .choices:nn = { alph, arabic }
+      { \int_compare:nNnT { \l_keys_choice_int } = { 2 } { \kpi@arabiclists } },
+    table-caption  .choices:nn = { indent, left }
+      { \int_compare:nNnT { \l_keys_choice_int } = { 2 } { \kpi@leftcaptions } },
+    appendix-title .choices:nn = { separate, inline }
+      { \int_compare:nNnT { \l_keys_choice_int } = { 2 } { \kpi@appinlinetrue } },
+    algorithms     .code:n = { \kpi@algorithms },
+    algorithms     .value_forbidden:n = true,
+  }
+\NewDocumentCommand \kpisetup { m } { \keys_set:nn { kpi / setup } { #1 } }
+\ExplSyntaxOff
+\@onlypreamble\kpisetup
 
 \RequirePackage[hidelinks]{hyperref}
 

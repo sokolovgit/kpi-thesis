@@ -3,7 +3,6 @@
 \documentclass{kpi-thesis}
 \usepackage{kpi-titles}
 \input{../meta.tex}
-\lstset{language=Python}
 
 \begin{document}
 \kpiDocTitle{source-code}
@@ -12,10 +11,11 @@
 \noindent Посилання на репозиторій з повним текстом програмного коду: \url{https://github.com/...}
 
 \codefile{src/module/file.py}{\todo{назва функціональної задачі}}
-% \lstinputlisting[firstline=1,lastline=40]{../../app/src/module/file.py}
-\begin{lstlisting}
+% \codeinput[firstline=1, lastline=40]{../../app/src/module/file.py}
+\begin{Verbatim}
 def example():
+    # коментар українською: listings під XeLaTeX тут переставив би розділові знаки
     return 42
-\end{lstlisting}
+\end{Verbatim}
 
 \end{document}
