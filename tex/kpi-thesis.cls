@@ -3,7 +3,7 @@
 % the department guide «Дипломний проєкт: ... вимоги до структури, змісту та оформлення» (2024).
 % Compile with XeLaTeX.
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesClass{kpi-thesis}[2026/11/15 v1.2 KPI FICE thesis documents]
+\ProvidesClass{kpi-thesis}[2026/11/15 v1.3 KPI FICE thesis documents]
 
 \newif\ifkpi@coursework
 \DeclareOption{diploma}{\kpi@courseworkfalse}
@@ -63,13 +63,16 @@
 \RequirePackage{xcolor}
 \RequirePackage{cite}
 \RequirePackage{pdftexcmds}
-\RequirePackage{xurl}
+% URLs break after / . - _ and the like, never mid-word; \kpisetup{url-breaks=anywhere} for xurl.
+\RequirePackage[hyphens]{url}
 \urlstyle{same}
 
 \setlength{\tabcolsep}{4pt}
 \newcolumntype{Y}{>{\RaggedRight\arraybackslash}X}
 % Flush-left cell that never breaks a word: \begin{kpitable}{|L{4cm}|L{10cm}|}...
-\newcolumntype{L}[1]{>{\RaggedRight\arraybackslash\hyphenpenalty=10000\exhyphenpenalty=10000}p{#1}}
+% Defined at \begin{document}, so a work that has its own L (from v1.1) keeps it without a warning.
+\AtBeginDocument{\@ifundefined{NC@find@L}%
+  {\newcolumntype{L}[1]{>{\RaggedRight\arraybackslash\hyphenpenalty=10000\exhyphenpenalty=10000}p{#1}}}{}}
 % media/ first: with latexmk -outdir=build, ../media/ also resolves against build/ and breaks loading.
 \graphicspath{{media/}{../media/}{./}}
 \floatplacement{figure}{H}
@@ -156,8 +159,24 @@
 %   \begin{kpitable}{|p{4cm}|p{10cm}|}{Назва\label{tab:key}}{Поле & Опис}  rows  \end{kpitable}
 % The caption and header never stay alone at the bottom of a page: the table starts on a new
 % page unless the header plus [N] more lines fit (default 5: caption and ~3 rows; 0 = off).
+% A longtable \hline is drawn twice around its break point, so a row rule at a page break
+% reappeared at the top of the next page. Here the header already opens each page: one rule.
+\ExplSyntaxOn
+\def\kpi@LT@hline{%
+  \noalign{\ifnum0=`}\fi\penalty\@M\futurelet\@let@token\kpi@LT@@hline}
+\def\kpi@LT@@hline{%
+  \ifx\@let@token\hline
+    \gdef\LT@sep{\penalty\@M\vskip\doublerulesep}%
+  \else
+    \gdef\LT@sep{\penalty-\@lowpenalty}%
+  \fi
+  \ifnum0=`{\fi}%
+  \multispan\LT@cols\unskip\leaders\hrule\@height\arrayrulewidth\hfill\cr
+  \noalign{\cs_if_exist_use:N \tbl_gdecr_row_count: \LT@sep}}
+\ExplSyntaxOff
 \newsavebox\kpi@tablehead
 \NewDocumentEnvironment{kpitable}{O{5} m m m}{%
+  \let\LT@hline\kpi@LT@hline
   \ifnum#1>0
     \sbox\kpi@tablehead{\begin{tabular}{#2}\hline #4 \\ \hline\end{tabular}}%
     \Needspace{\dimexpr\ht\kpi@tablehead+\dp\kpi@tablehead+#1\baselineskip\relax}%
@@ -359,6 +378,7 @@
 %   enumerate      = arabic   % «1)», nested «а)»; default «а)», nested «1)»
 %   table-caption  = left     % from the left edge; default from the paragraph indent
 %   appendix-title = inline   % «Додаток А. Назва» on one line; default two lines
+%   url-breaks     = anywhere % xurl: a URL may break at any character; default after / . - _
 %   algorithms                % algorithm + algpseudocode, «Алгоритм 1.1 – Назва» like tables
 \newif\ifkpi@appinline
 \def\kpi@nohyphenation{%
@@ -388,6 +408,8 @@
       { \int_compare:nNnT { \l_keys_choice_int } = { 2 } { \kpi@leftcaptions } },
     appendix-title .choices:nn = { separate, inline }
       { \int_compare:nNnT { \l_keys_choice_int } = { 2 } { \kpi@appinlinetrue } },
+    url-breaks     .choices:nn = { symbols, anywhere }
+      { \int_compare:nNnT { \l_keys_choice_int } = { 2 } { \RequirePackage{xurl} } },
     algorithms     .code:n = { \kpi@algorithms },
     algorithms     .value_forbidden:n = true,
   }

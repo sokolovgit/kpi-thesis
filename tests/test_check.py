@@ -146,6 +146,24 @@ class CheckTest(unittest.TestCase):
         code, out = run(doc(app))
         self.assertNotIn("згадано раніше", out)
 
+    def test_macro_name_with_digit(self):
+        files = doc(r"\input{gen}")
+        files["gen.tex"] = "\\newcommand\\resultChi2{281}\n\\newcommand{\\okName}{1}\n"
+        code, out = run(files)
+        self.assertEqual(code, 1)
+        self.assertIn("\\resultChi2", out)
+        self.assertNotIn("okName", out)
+
+    def test_parentheses(self):
+        code, out = run(doc(r"Отже (формула~\eqref{eq:a}) і (\eqref{eq:a})."))
+        self.assertIn("((2.8))", out)
+        code, out = run(doc(r"За формулою~\eqref{eq:a} (див. рисунок~\ref{x})."))
+        self.assertNotIn("дужк", out)
+        code, out = run(doc("Стани (помінялися лише $(0, 1)$ і $(1, 0)$) далі."))
+        self.assertIn("дужки в дужках", out)
+        code, out = run(doc("\\begin{equation}\n f(g(x)) \\\\[2pt]\n\\end{equation}\nТекст (тут)."))
+        self.assertNotIn("дужки в дужках", out)
+
 
 class PdfChecksTest(unittest.TestCase):
     """Checks that read the built PDF, fed with page texts instead of pdftotext."""
@@ -170,6 +188,20 @@ class PdfChecksTest(unittest.TestCase):
         self.assertIn("Рисунок 1.1 — на с. 3, а вперше згадана на с. 1", out)
         self.assertIn("Таблиця 1.2 — на с. 4", out)
         self.assertNotIn("Рисунок 2.1", out)
+
+    def test_number_lists_count_as_mentions(self):
+        pages = [
+            "наведено в таблицях 4.2 і 4.3, на рисунках 3.1, 3.2 та 3.3",
+            "Таблиця 4.2 – А\nТаблиця 4.3 – Б\nРисунок 3.1 – В\nРисунок 3.2 – Г\nРисунок 3.3 – Д",
+        ]
+        code, out = self.run_pdf(pages)
+        self.assertNotIn("раніше за першу згадку", out)
+
+    def test_short_page_before_section(self):
+        pages = ["ЗМІСТ", "1 АНАЛІЗ\nтекст", "      7\nостанній рядок висновків", "2 ПРОЄКТУВАННЯ\nтекст", "Рисунок 2.1 – Схема", "3 РЕАЛІЗАЦІЯ"]
+        code, out = self.run_pdf(pages)
+        self.assertIn("с. 3: перед новим розділом лише 1", out)
+        self.assertNotIn("с. 5", out)
 
     def test_coursework_chapter_pages(self):
         pages = [

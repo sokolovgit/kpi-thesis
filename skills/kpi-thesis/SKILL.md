@@ -1,7 +1,7 @@
 ---
 name: kpi-thesis
 description: Writes, builds and checks a KPI FICE (кафедра ІПІ) bachelor diploma or coursework in LaTeX with the kpi-thesis class — the full diploma package (титул, завдання, анотації, відомість, ТЗ, ПЗ, текст програми, ПМТ, КК, графічний матеріал) formatted per the department guide and ДСТУ 3008:2015, plus normcontrol checks. Use when the user works on a diploma or coursework ("дипломна", "диплом", "курсова", "курсач", "пояснювальна записка", "ПЗ", "титулка", "анотація", "список джерел", "нормоконтроль", "ДСТУ", "латех", "LaTeX", "/kpi-thesis"), starts a new one, sets up the tools, or asks about thesis formatting or submission rules.
-allowed-tools: Bash(just build:*), Bash(just all), Bash(just check), Bash(just stats), Bash(kpsewhich:*)
+allowed-tools: Bash(just build:*), Bash(just all), Bash(just check), Bash(just stats), Bash(just clean-aux), Bash(kpsewhich:*)
 ---
 
 # Дипломний проєкт і курсова (КПІ ФІОТ, кафедра ІПІ) у LaTeX
@@ -37,8 +37,21 @@ cls=$(kpsewhich kpi-thesis.cls) && dir=$(dirname "$cls") \
 git -C "$repo" fetch -q origin 2>/dev/null && git -C "$repo" rev-list --count HEAD..@{u} 2>/dev/null
 ```
 
-Більше нуля — сказати, скільки комітів бракує, і запропонувати `git -C "$repo" pull`
-(на Windows з копією класу — ще `just install`). Порожньо (немає мережі чи upstream) — пропустити мовчки.
+Більше нуля — сказати, скільки комітів бракує, і запропонувати оновлення. Порожньо (немає
+мережі чи upstream) — пропустити мовчки.
+
+**Оновлення класу зачіпає всі роботи одразу** (клас підключено симлінком). Тому:
+
+1. Показати, що зміниться: розділ нових версій у `$repo/CHANGELOG.md`, особливо «Перехід».
+2. Попросити закомітити роботи, над якими йде робота.
+3. `git -C "$repo" pull` (на Windows з копією класу — ще `just install`).
+4. У кожній роботі: `just all` (курсова — `just build`) і `just check`; прибрати з преамбули те,
+   що за «Переходом» тепер робить клас.
+
+Робота, що вже на здачі, не мусить оновлюватися: `just freeze` у ній копіює поточний клас у
+`tex/` роботи, і `git pull` її більше не змінює (повернути — `rm -rf tex`). У роботі, створеній
+до v1.3, рецепта ще немає: `cp -R "$repo/tex" tex` і рядок
+`ensure_path('TEXINPUTS', './tex//');` у `.latexmkrc` (у дипломі — `'../tex//'`).
 
 ## Нова робота
 
@@ -61,6 +74,9 @@ just check      # перевірки нормоконтролю
 1. `just build <doc>` (курсова — `just build`); у кінці — `just all`.
 2. `just check`.
 3. Виправити все, що він знайшов, і повторити з кроку 1.
+
+Збірка впала — `just build` показує перші помилки з журналу. Після двох збірок одночасно
+(наприклад, `just watch` і `just all`) або дивних помилок у `.aux` — `just clean-aux`.
 
 Не казати, що документ готовий, поки `check` дає помилки, крім заглушок `\todo`, які
 користувач ще має заповнити сам. Попередження показати й пояснити, а не мовчки ігнорувати.
@@ -110,7 +126,7 @@ just check      # перевірки нормоконтролю
 - **Де методичка курсової розходиться з дипломною** — `\kpisetup{...}` у `main.tex`, не
   ручні `\geometry` / `\setlist`:
   `left-margin=20mm`, `hyphenation=false`, `enumerate=arabic`, `table-caption=left`,
-  `appendix-title=inline`, `algorithms`. Кожну опцію — з коментарем, на який пункт методички
+  `appendix-title=inline`, `algorithms`, `url-breaks=anywhere` (дуже довгі адреси). Кожну опцію — з коментарем, на який пункт методички
   вона спирається. Це єдине місце таких рішень: не дублювати їх в інших нотатках, бо
   розійдуться.
 - **Обсяги розділів** перевіряє `just check`, якщо в `main.tex` є рядок
@@ -125,6 +141,8 @@ just check      # перевірки нормоконтролю
   на які є посилання (`\eqref` / «(1.2)»).
 - **На кожен рисунок і таблицю — посилання в тексті** («на рисунку~\ref{fig:x}»,
   «(таблиця~\ref{tab:x})»). Діапазон `\ref{a}--\ref{b}` покриває все між ними.
+- **Без дужок у дужках**: «за формулою (2.8)», а не «(формула (2.8))»; кортежі й номери
+  всередині дужок — перефразувати.
 - **Джерела — у порядку першої згадки** (`thebibliography` руками, ДСТУ 8302, мітка `1)`).
 - **Кожен розділ закінчується** `\subsection{Висновки до розділу}`.
 - **Вступ ≤ 4 с., розділ 1 ≤ 30 %, основна частина 60–70 с.**; анотації ≤ 1000 знаків, 3–10
