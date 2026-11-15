@@ -2,6 +2,16 @@
 % (ДСТУ 3008:2015); склад розділів звірити з методичкою курсової своєї дисципліни.
 \documentclass[coursework]{kpi-thesis}
 \usepackage{kpi-titles}
+% Оформлення за методичкою диплома. Якщо методичка курсової вимагає інше, увімкнути тут
+% (і записати поруч, на який пункт методички це спирається):
+% \kpisetup{
+%   left-margin    = 20mm,    % поля 20 мм з усіх боків
+%   hyphenation    = false,   % без переносів
+%   enumerate      = arabic,  % перелік «1)»
+%   table-caption  = left,    % підпис таблиці від лівого краю
+%   appendix-title = inline,  % «Додаток А. Назва» одним рядком
+%   algorithms,               % псевдокод: algorithm + algpseudocode
+% }
 \kpiset{
   title         = {\todo{Тема курсової роботи}},
   discipline    = {\todo{Назва дисципліни}},
@@ -9,6 +19,7 @@
   course        = {IV},
   gender        = {m},
   student       = {\todo{Прізвище Ім'я По батькові}},
+  gradebook     = {\todo{номер залікової книжки}},
   advisor       = {\todo{посада, науковий ступінь, Прізвище І. П.}},
   year          = {2027},
 }

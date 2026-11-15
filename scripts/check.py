@@ -118,46 +118,73 @@ def check_bibliography(rows, root):
                 break
 
 
+KINDS = {
+    "figure": "figure",
+    "table": "table",
+    "longtable": "table",
+    "kpitable": "table",
+    **{e: "equation" for e in ("equation", "align", "gather", "multline", "eqnarray")},
+}
+WORDS = {"figure": ("рисунок", "рисунка"), "table": ("таблицю", "таблиці"), "equation": ("формулу", "формули")}
+
+
 def check_refs(rows, root):
-    labels = []  # (key, row, kind)
+    labels = []  # (key, row, kind, offset in body); appendix objects are left out of the order check
     env_stack = []
+    offset = 0
+    in_appendix = False
     for row in rows:
         text = row[2]
-        for m in re.finditer(r"\\(begin|end)\{([^}]+)\}", text):
+        in_appendix = in_appendix or "\\appendices" in text
+        for m in re.finditer(r"\\(begin|end|label)\{([^}]+)\}", text):
             if m.group(1) == "begin":
-                env_stack.append(m.group(2))
-            elif env_stack and env_stack[-1] == m.group(2):
-                env_stack.pop()
-        for m in re.finditer(r"\\label\{([^}]+)\}", text):
-            env = next(
-                (
-                    e
-                    for e in reversed(env_stack)
-                    if e in ("figure", "table", "longtable")
-                ),
-                None,
-            )
-            kind = {"figure": "figure", "table": "table", "longtable": "table"}.get(env)
+                env_stack.append(m.group(2).rstrip("*"))
+                continue
+            if m.group(1) == "end":
+                if env_stack and env_stack[-1] == m.group(2).rstrip("*"):
+                    env_stack.pop()
+                continue
+            pos, m = m.start(), re.match(r"\\label\{([^}]+)\}", m.group(0))
+            env = next((e for e in reversed(env_stack) if e in KINDS), None)
+            kind = KINDS.get(env)
             if kind is None and m.group(1).startswith(("fig:", "tab:")):
                 kind = "figure" if m.group(1).startswith("fig:") else "table"
             if kind:
-                labels.append((m.group(1), row, kind))
+                labels.append((m.group(1), row, kind if not in_appendix else f"{kind}-appendix", offset + pos))
+        offset += len(text) + 1
     body = "\n".join(r[2] for r in rows)
-    refs = set(re.findall(r"\\(?:auto|c|C|page)?ref\{([^}]+)\}", body))
-    order = [k for k, _, _ in labels]
+    first = {}  # key -> offset of its first reference
+    for m in re.finditer(r"\\(?:auto|c|C|page|eq)?ref\{([^}]+)\}", body):
+        first.setdefault(m.group(1), m.start())
+    order = [k for k, *_ in labels]
     # «таблиці 2.1–2.16»: a range covers every label defined between its ends
-    for a, b in re.findall(r"\\ref\{([^}]+)\}\s*(?:--|–|—|-)\s*\\ref\{([^}]+)\}", body):
+    for m in re.finditer(r"\\ref\{([^}]+)\}\s*(?:--|–|—|-)\s*\\ref\{([^}]+)\}", body):
+        a, b = m.groups()
         if a in order and b in order:
             i, j = sorted((order.index(a), order.index(b)))
-            refs.update(order[i : j + 1])
-    for key, row, kind in labels:
-        if key not in refs:
-            word = "рисунок" if kind == "figure" else "таблицю"
-            report(ERR, loc(row, root), f"на {word} «{key}» немає посилання в тексті")
+            for k in order[i : j + 1]:
+                first.setdefault(k, m.start())
+    for key, row, kind, _ in labels:
+        kind = kind.removesuffix("-appendix")
+        if key in first:
+            continue
+        if kind == "equation":
+            report(WARN, loc(row, root),
+                   f"на формулу «{key}» немає посилання — нумерують лише ті, на які посилаються (equation*)")
+        else:
+            report(ERR, loc(row, root), f"на {WORDS[kind][0]} «{key}» немає посилання в тексті")
+    for kind in ("figure", "table"):
+        seen = [(k, r) for k, r, kd, _ in labels if kd == kind and k in first]
+        for (a, _), (b, row) in zip(seen, seen[1:]):
+            if first[b] < first[a]:
+                report(WARN, loc(row, root),
+                       f"{WORDS[kind][0]} «{b}» згадано раніше за попередню «{a}» — нумерація має йти за першою згадкою")
+                break
 
 
 def check_text(rows, root, is_note):
     in_bib = in_code = False
+    in_body = not any("\\begin{document}" in r[2] for r in rows)
     sections = []
     for row in rows:
         text = row[2]
@@ -169,6 +196,11 @@ def check_text(rows, root, is_note):
             in_code = False
             continue
         if in_code:
+            continue
+        if not in_body:
+            in_body = "\\begin{document}" in text
+            if re.search(r"\\todo\{", text):
+                todos.setdefault(row[0], []).append(row[1])
             continue
         for m in re.finditer(r"\\begin\{(figure|table)\}\[([^\]]*)\]", text):
             if "H" not in m.group(2):
@@ -187,13 +219,18 @@ def check_text(rows, root, is_note):
             report(
                 WARN, loc(row, root), "довге тире: потрібне коротке «–» (`--` у LaTeX)"
             )
-        if not in_bib:
+        if re.search(r"(?:[+=<>-]|\\cdot|\\times)\s*\\ldots|\\ldots\s*(?:[+=<>-]|\\cdot|\\times)", text):
+            report(WARN, loc(row, root), "\\ldots між знаками операцій: потрібне \\cdots (a_1 + \\cdots + a_n)")
+        if re.search(r"[^\s~(\[{]\s+\\(?:ref|eqref)\{", text):
+            report(WARN, loc(row, root), "перед \\ref — звичайний пробіл: номер може перенестися на новий рядок (рисунок~\\ref{...})")
+        if not in_bib and row[0].name != "meta.tex" and not re.match(r"\s*(?:\\kpiset|[a-z-]+\s*=)", text):
             plain = re.sub(
-                r"\\(?:url|path|href|ref|label|cite|includegraphics|input|lstinputlisting|texttt|codefile)\*?(\[[^\]]*\])?\{[^}]*\}",
+                r"\\(?:url|path|href|ref|label|cite|includegraphics|input|lstinputlisting|codeinput|texttt|codefile|kpiCode)\*?(\[[^\]]*\])?\{[^}]*\}",
                 " ",
                 text,
             )
             plain = re.sub(r"\$[^$]*\$", " ", plain)
+            numbers(plain, row, root)
             # Only quantities (percent or a unit after the number): «1.2» alone is usually a section/figure/ID.
             for m in re.finditer(
                 r"(?<![\w.\\-])(\d+)\.(\d+)(?=(?:\s|~|\\,)*(?:\\?%|(?:с|мс|хв|год|кг|т|г|грн|USD|ГБ|МБ|КБ|Гб|Мб|км|м|см|мм|пікс|кадр\w*|раз\w*)(?![\w]))|(?:\s|~)+(?:відсот\w*|секунд\w*|хвилин\w*|разу|рази))",
@@ -219,6 +256,16 @@ def check_text(rows, root, is_note):
                 loc(row, root),
                 f"розділ «{title}» без підрозділу «Висновки до розділу»",
             )
+
+
+def numbers(plain, row, root):
+    """ДСТУ 3008: four-digit numbers are written solid, from five digits in groups of three."""
+    for m in re.finditer(r"(?<![\d.,\w])([1-9])(?:\s|~|\\,)(\d{3})(?![\d]|(?:\s|~|\\,)\d{3})", plain):
+        report(WARN, loc(row, root), f"«{m.group(0)}» — чотирицифрове число пишуть без пробілу: {m.group(1)}{m.group(2)}")
+    for m in re.finditer(r"(?<![\d.,\w\-])([1-9]\d{4,})(?![\d\w])", plain):
+        n = m.group(1)
+        grouped = f"{int(n):,}".replace(",", "~")
+        report(WARN, loc(row, root), f"«{n}» — від п'яти цифр розряди відділяють пробілом: {grouped}")
 
 
 def check_log(doc, root):
@@ -321,10 +368,32 @@ def check_annotations(root):
                     )
 
 
-def check_volume(root):
-    pages = pdf_pages_text(built_pdf(root, "explanatory-note"))
-    if not pages:
+def doc_pdf(doc):
+    pdf = doc.parent / "build" / f"{doc.stem}.pdf"
+    return pdf if pdf.exists() else doc.with_suffix(".pdf")
+
+
+def volume_limits(doc):
+    """`% check: chapter-pages=3-15, intro-pages=1-4` anywhere in the document's main .tex."""
+    limits = {}
+    if doc.stem == "explanatory-note":
+        limits = {"intro-pages": (0, 4), "main-pages": (60, 70), "chapter1-share": (0, 30)}
+    for line in doc.read_text(encoding="utf-8").splitlines():
+        m = re.match(r"\s*%\s*check:\s*(.+)", line)
+        if m:
+            for k, lo, hi in re.findall(r"([\w-]+)\s*=\s*(\d+)(?:\s*-\s*(\d+))?", m.group(1)):
+                limits[k] = (int(lo), int(hi)) if hi else (0, int(lo))
+    return limits
+
+
+CHAPTER = r"^\s*{n}\s+[А-ЯІЇЄҐA-Z][А-ЯІЇЄҐA-Z0-9’'«»,:()\- –]{{4,}}\s*$"
+
+
+def check_volume(doc, root, limits):
+    pages = pdf_pages_text(doc_pdf(doc))
+    if not pages or not limits:
         return
+    where = str(doc_pdf(doc).relative_to(root))
 
     def first(pattern, start=0):
         for i in range(start, len(pages)):
@@ -334,23 +403,67 @@ def check_volume(root):
 
     toc_end = first(r"^\s*ВСТУП\s*\.{3,}") or 0
     intro = first(r"^\s*ВСТУП\s*$", toc_end + 1)
-    ch1 = first(r"^\s*1\s+[А-ЯІЇЄҐ’' ]{6,}\s*$", (intro or toc_end) + 1)
-    ch2 = first(r"^\s*2\s+[А-ЯІЇЄҐ’' ]{6,}\s*$", (ch1 or 0) + 1)
-    concl = first(r"^\s*ВИСНОВКИ\s*$", (ch1 or 0) + 1)
-    if None in (intro, ch1, concl):
+    starts = []
+    while True:
+        i = first(CHAPTER.format(n=len(starts) + 1), (starts[-1] if starts else (intro or toc_end)) + 1)
+        if i is None:
+            break
+        starts.append(i)
+    concl = first(r"^\s*ВИСНОВКИ\s*$", (starts[-1] if starts else 0) + 1)
+    if intro is None or not starts or concl is None:
         return
-    intro_pages, main_pages = ch1 - intro, concl - ch1
-    pdf = "explanatory-note/build/explanatory-note.pdf"
-    if intro_pages > 4:
-        report(WARN, pdf, f"ВСТУП займає {intro_pages} с., межа — 4")
-    if not 60 <= main_pages <= 70:
-        report(WARN, pdf, f"основна частина — {main_pages} с., методичка радить 60–70")
-    if ch2 and main_pages and (ch2 - ch1) / main_pages > 0.30:
-        report(
-            WARN,
-            pdf,
-            f"розділ 1 — {100 * (ch2 - ch1) // main_pages}% основної частини, межа — 30%",
-        )
+
+    def out_of(key, value, what):
+        lo, hi = limits.get(key, (None, None))
+        if lo is not None and not lo <= value <= hi:
+            bound = f"{lo}–{hi}" if lo else f"до {hi}"
+            report(WARN, where, f"{what}: {value}, за методичкою {bound}")
+
+    out_of("intro-pages", starts[0] - intro, "ВСТУП, сторінок")
+    main_pages = concl - starts[0]
+    out_of("main-pages", main_pages, "основна частина, сторінок")
+    for n, (a, b) in enumerate(zip(starts, [*starts[1:], concl]), 1):
+        out_of("chapter-pages", b - a, f"розділ {n}, сторінок")
+    if len(starts) > 1 and main_pages:
+        out_of("chapter1-share", 100 * (starts[1] - starts[0]) // main_pages, "розділ 1, % основної частини")
+
+
+NUM = r"([А-ЯA-Z]?\d*\.?\d+|[А-ЯA-Z]\.\d+)"
+
+
+def check_placement(doc, root):
+    """ДСТУ 3008: a figure or table goes after its first mention, on that page or the next."""
+    pages = pdf_pages_text(doc_pdf(doc))
+    if not pages:
+        return
+    where = str(doc_pdf(doc).relative_to(root))
+    caption = re.compile(rf"^\s*(Рисунок|Таблиця)\s+{NUM}\s+[–-]", re.M)
+    placed, mentioned = {}, {}
+    for i, page in enumerate(pages):
+        for m in caption.finditer(page):
+            placed.setdefault((m.group(1)[0], m.group(2)), i)
+        text = caption.sub(" ", page)
+        text = re.sub(r"Продовження\s+таблиці\s+\S+", " ", text)
+        text = re.sub(r"-\n\s*", "", text)
+        text = re.sub(r"\s+", " ", text)
+        for m in re.finditer(rf"(?i)(?<!\w)(рис(?:ун\w*|\.)|табл(?:иц\w*|\.))\s*{NUM}(?:\s*[–-]\s*{NUM})?", text):
+            kind = "Р" if m.group(1).lower().startswith("рис") else "Т"
+            nums = [m.group(2)]
+            if m.group(3) and "." in m.group(2) and "." in m.group(3):
+                (p1, a), (p2, b) = m.group(2).rsplit(".", 1), m.group(3).rsplit(".", 1)
+                if p1 == p2 and a.isdigit() and b.isdigit():
+                    nums = [f"{p1}.{k}" for k in range(int(a), int(b) + 1)]
+            for num in nums:
+                mentioned.setdefault((kind, num), i)
+    for (kind, num), c in sorted(placed.items(), key=lambda x: x[1]):
+        m = mentioned.get((kind, num))
+        if m is None or not num[0].isdigit():  # appendix objects live in their appendix
+            continue
+        name = ("Рисунок" if kind == "Р" else "Таблиця") + f" {num}"
+        if c > m + 1:
+            report(WARN, where, f"{name} — на с. {c + 1}, а вперше згадана на с. {m + 1}: має стояти на тій самій або наступній сторінці")
+        elif c < m:
+            report(WARN, where, f"{name} — на с. {c + 1}, раніше за першу згадку (с. {m + 1})")
 
 
 def stats(root):
@@ -386,6 +499,8 @@ def main(argv):
         check_refs(rows, root)
         check_text(rows, root, is_note)
         check_log(doc, root)
+        check_volume(doc, root, volume_limits(doc))
+        check_placement(doc, root)
         if (
             "meta.tex" not in "".join(r[2] for r in rows if "\\input" in r[2])
             and (root / "meta.tex").exists()
@@ -403,7 +518,6 @@ def main(argv):
                     "шифр документа вписано вручну; використайте \\kpiCode{...} з meta.tex",
                 )
     check_annotations(root)
-    check_volume(root)
     for path, lines in todos.items():
         lines = sorted(set(lines))
         where = loc((path, lines[0], ""), root)
