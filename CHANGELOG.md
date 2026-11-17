@@ -3,7 +3,7 @@
 Версії класу — у `\ProvidesClass` / `\ProvidesPackage` (`tex/`) і в git-тегах.
 Оновлення: `git pull` у клоні репозиторію; плагін — `/plugin marketplace update kpi-thesis`.
 
-## v2.0.0 — не випущено
+## v2.0.0 — 2026-11-17
 
 Рушій — LuaLaTeX (#19). Команда LaTeX більше не розвиває XeTeX і радить LuaTeX
 ([LaTeX News 40](https://www.latex-project.org/news/latex2e-news/ltnews40.pdf)).
@@ -23,6 +23,11 @@
   користується командами `etoolbox` напряму, підключіть його в преамбулі (зараз його й так
   підвантажують інші пакети).
 - `just test` збирає `kpitable` на дві сторінки й перевіряє «Продовження таблиці».
+
+Пакування (#23):
+- `just ctan` — архів для CTAN з документацією `docs/kpi-thesis-doc.tex`;
+  `just ctan-validate <email>` перевіряє його на сервері CTAN, нічого не публікуючи.
+- `just overleaf` — zip шаблону курсової для Overleaf (Upload Project), додається до релізу.
 
 ### Перехід з 1.3
 

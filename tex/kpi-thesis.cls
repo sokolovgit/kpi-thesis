@@ -3,7 +3,7 @@
 % the department guide «Дипломний проєкт: ... вимоги до структури, змісту та оформлення» (2024).
 % Compile with LuaLaTeX (XeLaTeX still works).
 \NeedsTeXFormat{LaTeX2e}
-\ProvidesClass{kpi-thesis}[2026/11/18 v2.0 KPI FICE thesis documents]
+\ProvidesClass{kpi-thesis}[2026/11/17 v2.0 KPI FICE thesis documents]
 
 % \documentclass[coursework, main-font={Times New Roman}]{kpi-thesis}; other options go to extarticle.
 \newif\ifkpi@coursework

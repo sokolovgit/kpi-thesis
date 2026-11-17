@@ -80,3 +80,39 @@ test:
       echo "kpitable: продовження на наступній сторінці є"
     fi
     echo "OK. PDF шаблонів: $tmp"
+
+# Архів для CTAN: build/kpi-thesis.zip (клас, пакети, документація, README, LICENSE)
+ctan:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    rm -rf build/ctan build/kpi-thesis.zip
+    mkdir -p build/ctan/kpi-thesis/doc build/doc
+    latexmk -lualatex -silent -outdir="{{ROOT}}/build/doc" docs/kpi-thesis-doc.tex >/dev/null \
+      || { grep -m5 -A3 '^!' build/doc/kpi-thesis-doc.log; exit 1; }
+    cp tex/*.cls tex/*.sty build/ctan/kpi-thesis/
+    cp ctan/README.md LICENSE build/ctan/kpi-thesis/
+    cp docs/kpi-thesis-doc.tex build/doc/kpi-thesis-doc.pdf build/ctan/kpi-thesis/doc/
+    (cd build/ctan && zip -qrX ../kpi-thesis.zip kpi-thesis)
+    unzip -l build/kpi-thesis.zip | tail -n +4 | sed '$d' | sed '$d' | awk '{print $4}'
+    echo "-> build/kpi-thesis.zip"
+
+# Перевірити архів і опис на сервері CTAN (нічого не публікує): just ctan-validate you@example.com
+ctan-validate email: ctan
+    #!/usr/bin/env bash
+    set -euo pipefail
+    e='{{email}}'
+    sed "s|^\\\\email{}|\\\\email{$e}|" ctan/kpi-thesis.pkg > build/ctan/kpi-thesis.pkg
+    cd build/ctan && PERL_LWP_SSL_CA_FILE="${PERL_LWP_SSL_CA_FILE:-/etc/ssl/cert.pem}" \
+      ctan-o-mat --validate kpi-thesis.pkg
+
+# Zip шаблону курсової для Overleaf (Upload Project): build/kpi-thesis-coursework-overleaf.zip
+overleaf:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    d=build/overleaf; rm -rf "$d" build/kpi-thesis-coursework-overleaf.zip; mkdir -p "$d"
+    cp -R templates/coursework/main.tex templates/coursework/chapters "$d/"
+    mkdir -p "$d/media" && touch "$d/media/.keep"
+    cp tex/kpi-thesis.cls tex/kpi-thesis-*.sty "$d/"
+    printf '%s\n' '$pdf_mode = 4;' > "$d/latexmkrc"
+    (cd "$d" && zip -qrX ../kpi-thesis-coursework-overleaf.zip .)
+    echo "-> build/kpi-thesis-coursework-overleaf.zip (Overleaf: New Project → Upload Project)"
