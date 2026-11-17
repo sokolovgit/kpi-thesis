@@ -168,15 +168,18 @@ just check                          # перевірки нормоконтро�
 - **LuaLaTeX** (`fontspec`). XeLaTeX ще збирає, з попередженням: команда LaTeX більше не
   розвиває XeTeX і радить LuaTeX. pdfLaTeX не підтримується.
 - **Overleaf** (компілятор LuaLaTeX) не має Times New Roman і Courier New: клас візьме
-  TeX Gyre Termes / Cursor. Для здачі завантажте `.ttf` Times New Roman у проєкт і вкажіть
-  його в `\setmainfont`. Основний сценарій — локальна збірка.
+  TeX Gyre Termes / Cursor. Для здачі завантажте чотири `.ttf` Times New Roman у проєкт і
+  підключіть у преамбулі: `\setmainfont{times.ttf}[BoldFont=timesbd.ttf, ItalicFont=timesi.ttf,
+  BoldItalicFont=timesbi.ttf]` (попередження класу про шрифт тоді можна не зважати). Готовий проєкт курсової — `kpi-thesis-coursework-overleaf.zip` у
+  [релізах](https://github.com/sokolovgit/kpi-thesis/releases) (New Project → Upload Project).
+  Диплом — кілька документів зі спільним `meta.tex`, тож його основний сценарій — локальна збірка.
 - Рецепти `just` — для bash; на Windows потрібен Git Bash або WSL.
 
 ## Структура репозиторію
 
 | Шлях | Що |
 |---|---|
-| `tex/kpi-thesis.cls` | сторінка, шрифти, заголовки, підписи, `kpitable`, `where`, переліки, додатки, лістинги, підрахунок чисел |
+| `tex/kpi-thesis.cls` | сторінка, шрифти, заголовки, підписи, додатки, список джерел, лістинги |
 | `tex/kpi-thesis-titles.sty` | `\kpiset{...}`, титул, завдання, анотації, відомість, титули документів |
 | `tex/kpi-thesis-graphics.sty` | аркуші А3 зі штампом ЄСКД |
 | `tex/kpi-thesis-{tables,where,lists,stats}.sty` | `kpitable`, `where`, переліки «а)», підрахунок для анотації; клас підключає їх сам |
@@ -184,6 +187,7 @@ just check                          # перевірки нормоконтро�
 | `templates/diploma/` | `meta.tex` + документи диплома: `title` (титул, завдання, анотації, відомість), `specification` (ТЗ), `explanatory-note` (ПЗ), `source-code` (текст програми), `test-plan` (ПМТ), `user-manual` (КК), `graphics` (графічний матеріал) |
 | `templates/coursework/` | курсова, один документ |
 | `scripts/check.py` | лінтер нормоконтролю (`tests/` — його тести) |
+| `docs/kpi-thesis-doc.tex`, `ctan/` | документація пакета й опис для CTAN (`just ctan`, `just ctan-validate <email>`) |
 | `skills/kpi-thesis/` | скіл Claude Code: процес, правила, вимоги з номерами пунктів, граблі |
 | `.claude-plugin/` | маніфест плагіна й маркетплейсу |
 

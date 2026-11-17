@@ -1,0 +1,137 @@
+% Documentation of the kpi-thesis bundle, typeset with the class itself (lualatex).
+\documentclass{kpi-thesis}
+\title{kpi-thesis}
+% A short manual, not a thesis: sections run on, tables are numbered 1, 2, ..., code is larger.
+\RemoveFromHook{cmd/section/before}[kpi-thesis]
+\renewcommand\thetable{\arabic{table}}
+\fvset{fontsize=\setstretch{1}\fontsize{11}{13}\selectfont}
+\begin{document}
+
+\begin{center}
+  \textbf{\large kpi-thesis}\par
+  Клас LaTeX для дипломного проєкту бакалавра й курсових робіт\par
+  КПІ ім.~Ігоря Сікорського, ФІОТ\par
+  \medskip
+  Версія 2.0, \today\par
+  Олександр Соколов, \url{https://github.com/sokolovgit/kpi-thesis}
+\end{center}
+
+\bigskip
+\noindent\textit{The kpi-thesis class typesets a bachelor diploma project and courseworks of
+Igor Sikorsky Kyiv Polytechnic Institute (Faculty of Informatics and Computer Engineering)
+following the Ukrainian standard DSTU~3008:2015 and the department guide: title page,
+assignment, abstracts, project sheet with ESKD title blocks, A3 drawing sheets, ДСТУ tables,
+formula explanations and lists. The documentation is in Ukrainian, the language of the
+documents it produces.}
+
+\structural{ЗМІСТ ПАКЕТА}
+
+Пакет складається з класу і пакетів, які клас підключає сам або які додає документ:
+\begin{itemize}
+  \item \texttt{kpi-thesis.cls} --- поля, шрифти, заголовки, підписи рисунків і таблиць,
+    додатки, список джерел, нумерація сторінок;
+  \item \texttt{kpi-thesis-titles.sty} --- дані роботи (\verb|\kpiset|), титульний лист,
+    завдання, анотації, відомість проєкту, титули документів;
+  \item \texttt{kpi-thesis-graphics.sty} --- аркуші графічного матеріалу А3 зі штампом ЄСКД;
+  \item \texttt{kpi-thesis-tables.sty}, \texttt{kpi-thesis-where.sty},
+    \texttt{kpi-thesis-lists.sty}, \texttt{kpi-thesis-stats.sty} --- таблиці з
+    «Продовження таблиці», пояснення до формул, переліки «а)», підрахунок сторінок, рисунків,
+    таблиць, джерел і додатків для анотації. Клас підключає їх сам; кожен можна взяти й
+    окремо.
+\end{itemize}
+
+Шаблони диплома й курсової, лінтер нормоконтролю \texttt{just check} і плагін для Claude Code
+живуть у репозиторії проєкту; там само --- покрокове встановлення для macOS, Linux і Windows.
+
+\structural{ЗБИРАННЯ}
+
+Рушій --- LuaLaTeX (\texttt{fontspec}). XeLaTeX ще працює, але клас попереджає: команда LaTeX
+більше не розвиває XeTeX. pdfLaTeX не підтримується.
+
+Методичка вимагає шрифти Times New Roman і Courier New. Якщо їх немає в системі (Overleaf,
+Linux без \texttt{ttf-mscorefonts-installer}), клас бере метрично сумісні TeX Gyre Termes і
+TeX Gyre Cursor і пише попередження. Для здачі потрібен саме Times New Roman.
+
+\structural{ОПЦІЇ КЛАСУ}
+
+\begin{Verbatim}
+\documentclass[coursework, main-font={Times New Roman}]{kpi-thesis}
+\end{Verbatim}
+
+\begin{kpitable}[0]{|L{4cm}|L{11.3cm}|}{Опції класу}{\textbf{Опція} & \textbf{Що робить}}
+\texttt{diploma} & документ диплома (типово) \\ \hline
+\texttt{coursework} & курсова робота \\ \hline
+\texttt{main-font=} & основний шрифт замість Times New Roman \\ \hline
+\texttt{mono-font=} & моноширинний шрифт замість Courier New \\ \hline
+інші & передаються класу \texttt{extarticle} \\ \hline
+\end{kpitable}
+
+Там, де методичка курсової розходиться з дипломною, у преамбулі ставиться
+\verb|\kpisetup{...}|:
+
+\begin{kpitable}[0]{|L{6.2cm}|L{9.1cm}|}{Ключі \texttt{\textbackslash kpisetup}}{\textbf{Ключ} & \textbf{Що робить}}
+\texttt{left-margin=20mm} & ліве поле (типово 30 мм) \\ \hline
+\texttt{hyphenation=false} & без переносів \\ \hline
+\texttt{enumerate=arabic} & перелік «1)», вкладений «а)» (типово навпаки) \\ \hline
+\texttt{table-caption=left} & підпис таблиці від лівого краю, а не з абзацу \\ \hline
+\texttt{appendix-title=inline} & «Додаток А. Назва» одним рядком \\ \hline
+\texttt{url-breaks=anywhere} & URL рветься будь-де (\texttt{xurl}) \\ \hline
+\texttt{algorithms} & \texttt{algorithm} і \texttt{algpseudocode}, «Алгоритм 1.1 -- Назва» \\ \hline
+\end{kpitable}
+
+\structural{КОМАНДИ}
+
+\begin{kpitable}[0]{|L{6.2cm}|L{9.1cm}|}{Команди класу}{\textbf{Команда} & \textbf{Призначення}}
+\verb|\structural{ВСТУП}| & структурний елемент без номера, у змісті \\ \hline
+\verb|\mainmatter| & нумерація сторінок з наступної після титулу \\ \hline
+\texttt{kpitable} & таблиця з «Продовження таблиці N» і повтором шапки \\ \hline
+\texttt{where} & пояснення до формули: «де» і символи з тире \\ \hline
+\verb|\appendices|, \verb|\appendix{Назва}| & додатки «Додаток А» \\ \hline
+\verb|\appendixpdf| & готовий PDF (звіт подібності тощо) як додаток \\ \hline
+\verb|\codefile|, \verb|\codeinput| & текст програми (\texttt{fvextra}, 8~пт) \\ \hline
+\verb|\diagramPage|, \verb|\graphicsSheet| & аркуш А3 зі штампом \\ \hline
+\verb|\todo{...}| & червона заглушка, яку рахує \texttt{just check} \\ \hline
+\end{kpitable}
+
+Таблиця з продовженням на наступних сторінках:
+\begin{Verbatim}
+\begin{kpitable}{|L{4cm}|L{10cm}|}{Назва\label{tab:key}}
+                {Поле & Опис}
+  Рядок & Значення \\ \hline
+\end{kpitable}
+\end{Verbatim}
+
+Пояснення символів після формули --- без двокрапки після «де», кожен символ з нового рядка:
+\begin{Verbatim}
+\begin{where} M & маса, кг; \\ F & сила, Н. \end{where}
+\end{Verbatim}
+
+\structural{ДАНІ РОБОТИ}
+
+Тема, ПІБ, група, шифри й дати задаються один раз через \verb|\kpiset{...}| з пакета
+\texttt{kpi-thesis-titles}; титул, завдання, штампи й колонтитули беруть їх звідти.
+Курсова:
+\begin{Verbatim}
+\documentclass[coursework]{kpi-thesis}
+\usepackage{kpi-thesis-titles}
+\kpiset{title = {Тема}, discipline = {Дисципліна}, group = {ІП-XX},
+        student = {Прізвище Ім'я По батькові},
+        advisor = {...}, year = {2027}}
+\begin{document}
+\kpiCourseworkTitle
+\mainmatter
+\tableofcontents
+\end{document}
+\end{Verbatim}
+
+Диплом складається з кількох документів (титул, ТЗ, пояснювальна записка, текст програми,
+ПМТ, керівництво користувача, графічний матеріал) зі спільним \texttt{meta.tex}; повний шаблон
+і рецепти збирання --- у репозиторії.
+
+\structural{ЛІЦЕНЗІЯ}
+
+MIT. Вимоги до оформлення: ДСТУ~3008:2015, ДСТУ~8302:2015 і методичка кафедри інформатики та
+програмної інженерії; методичку й вимоги час від часу оновлюють, тож звіряйтеся з актуальною
+редакцією і з керівником.
+
+\end{document}

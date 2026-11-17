@@ -1,0 +1,34 @@
+% ctan-o-mat description of the CTAN upload; `just ctan-validate <email>` checks it,
+% the uploader's email is filled in then and never stored here.
+\pkg{kpi-thesis}
+\version{2.0.0}
+\author{Oleksandr Sokolov}
+\uploader{Oleksandr Sokolov}
+\email{}
+\ctanPath{/macros/latex/contrib/kpi-thesis}
+\license{mit}
+\home{https://github.com/sokolovgit/kpi-thesis}
+\repository{https://github.com/sokolovgit/kpi-thesis}
+\bugtracker{https://github.com/sokolovgit/kpi-thesis/issues}
+\update{false}
+\topic{dissertation}
+\topic{class}
+\summary{Diploma and coursework of KPI (Kyiv) per the Ukrainian standard DSTU 3008:2015}
+\begin{description}
+A LaTeX class for the bachelor diploma project and courseworks of Igor Sikorsky Kyiv
+Polytechnic Institute, Faculty of Informatics and Computer Engineering, typeset per the
+Ukrainian standard DSTU 3008:2015 and the department guide. It covers the whole diploma
+package: title page, assignment, Ukrainian and English abstracts with counted pages,
+figures, tables, sources and appendices, the project sheet and A3 drawing sheets with ESKD
+title blocks, and tables continued across pages.
+
+The class needs LuaLaTeX. It uses Times New Roman and Courier New, required by the guide,
+and falls back to TeX Gyre Termes and Cursor where they are missing. The documentation is
+in Ukrainian.
+\end{description}
+\begin{announcement}\end{announcement}
+\begin{note}
+First upload. Times New Roman is what the university guide requires, but the class does not
+depend on it: without it the class uses TeX Gyre Termes and Cursor.
+\end{note}
+\file{../kpi-thesis.zip}
