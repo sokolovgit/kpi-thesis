@@ -1,7 +1,7 @@
 % kpi-thesis.cls — diploma / coursework documents for KPI FICE (ІПІ department).
 % Based on a 2026 diploma format that passed normcontrol; rules: ДСТУ 3008:2015 and
 % the department guide «Дипломний проєкт: ... вимоги до структури, змісту та оформлення» (2024).
-% Compile with XeLaTeX.
+% Compile with LuaLaTeX (XeLaTeX still works).
 \NeedsTeXFormat{LaTeX2e}
 \ProvidesClass{kpi-thesis}[2026/11/15 v1.3 KPI FICE thesis documents]
 
@@ -25,10 +25,36 @@
   \let\@listi\@listI
 }
 
+% --- Engine ---
+% XeTeX gets no new LaTeX features (LaTeX News 40), so LuaLaTeX is the default build.
+\ExplSyntaxOn
+\sys_if_engine_pdftex:T
+  {
+    \ClassError { kpi-thesis }
+      { Потрібен~LuaLaTeX~(fontspec);~pdfLaTeX~не~підтримується }
+      { Зберіть~роботу~через~lualatex:~у~шаблонах~це~робить~.latexmkrc. }
+  }
+\sys_if_engine_xetex:T
+  {
+    \ClassWarningNoLine { kpi-thesis }
+      { XeLaTeX~ще~працює,~але~рекомендовано~LuaLaTeX:~у~.latexmkrc~роботи~
+        замініть~xelatex~на~lualatex }
+  }
+\ExplSyntaxOff
+
 % --- Fonts, language ---
+% Times New Roman and Courier New are what the guide requires, but they are not free: Overleaf
+% and Linux without mscorefonts lack them, so the metric-compatible TeX Gyre fonts stand in.
 \RequirePackage{fontspec}
-\setmainfont{Times New Roman}
-\setmonofont{Courier New}
+% The fallback is loaded by file name: XeTeX doesn't see TeX Live's own fonts by family name.
+\NewDocumentCommand\kpi@setfont{m m m m}{%
+  \IfFontExistsTF{#2}{#1{#2}}{%
+    \ClassWarningNoLine{kpi-thesis}{Шрифту «#2» немає, замість нього «#3». Методичка вимагає
+      #2: для здачі встановіть його або завантажте .ttf у проєкт}%
+    #1{#4}[Extension=.otf, UprightFont=*-regular, BoldFont=*-bold, ItalicFont=*-italic,
+      BoldItalicFont=*-bolditalic]}}
+\kpi@setfont\setmainfont{Times New Roman}{TeX Gyre Termes}{texgyretermes}
+\kpi@setfont\setmonofont{Courier New}{TeX Gyre Cursor}{texgyrecursor}
 \RequirePackage[english,ukrainian,shorthands=off]{babel}
 
 % --- Page ---

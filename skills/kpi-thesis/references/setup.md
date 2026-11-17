@@ -7,7 +7,7 @@
 
    ```sh
    [ -d /Library/TeX/texbin ] && PATH="/Library/TeX/texbin:$PATH"
-   for c in xelatex latexmk kpsewhich just git; do
+   for c in lualatex latexmk kpsewhich just git; do
      command -v "$c" >/dev/null && echo "ok  $c" || echo "--  $c"
    done
    command -v python3 >/dev/null || command -v python >/dev/null && echo "ok  python" || echo "--  python"
@@ -17,7 +17,7 @@
    ```
 
    Шрифти перевіряються лише там, де є `fc-list` (Linux); у macOS і Windows вони вбудовані.
-   poppler необов'язковий: без нього `just all` зводить PDF самим XeLaTeX, а `just check`
+   poppler необов'язковий: без нього `just all` зводить PDF самим LuaLaTeX, а `just check`
    пропускає перевірки анотації й обсягу за готовим PDF.
 
 2. **Поставити відсутнє.** Дати команди для ОС користувача. Інсталятори, що питають пароль
@@ -27,9 +27,9 @@
      - сам: `brew install --cask mactex-no-gui` — це `.pkg`, просить пароль; кілька ГБ, 10–20 хв.
        Після нього бінарники в `/Library/TeX/texbin`, у новому терміналі вже в PATH;
      - можна з Claude: `brew install just poppler`.
-   - Linux (Debian/Ubuntu), сам: `sudo apt install texlive-xetex texlive-latex-extra
+   - Linux (Debian/Ubuntu), сам: `sudo apt install texlive-luatex texlive-latex-extra
      texlive-fonts-recommended texlive-plain-generic texlive-lang-cyrillic latexmk
-     poppler-utils python3 ttf-mscorefonts-installer`. `just` ≥ 1.21 — бінарник із
+     fonts-texgyre poppler-utils python3 ttf-mscorefonts-installer`. `just` ≥ 1.21 — бінарник із
      https://github.com/casey/just/releases (в apt часто старий або відсутній).
    - Windows: TeX Live (https://tug.org/texlive/windows.html) і Git for Windows ставить сам
      (усі команди далі — у Git Bash); потім `winget install Casey.Just` і

@@ -1,7 +1,9 @@
 # Граблі
 
-- **XeLaTeX напряму в PDF.** `.latexmkrc` має `$pdf_mode = 1` з `xelatex` замість pdflatex.
-  Шлях через `.xdv` (`$pdf_mode = 5`) ламав аркуші А3 графічного матеріалу.
+- **LuaLaTeX, `.latexmkrc` з `$pdf_mode = 4`.** Робота з `xelatex` у `.latexmkrc` (до v2) теж
+  збирається, з попередженням класу. Через `.xdv` (`$pdf_mode = 5`) не збирати: ламає аркуші А3.
+- **Немає Times New Roman / Courier New** (Overleaf, Linux без mscorefonts) — клас бере TeX Gyre
+  Termes / Cursor і пише попередження. Для здачі потрібен саме Times New Roman.
 - **`_` у тексті = математика.** Заглушки на кшталт `«__» ____` у `meta.tex` дають
   «Missing $ inserted». Для порожніх місць — `\todo{...}` або `\sigline{2cm}`.
 - **`\todo` не може обгортати `\includegraphics` / `\lstinputlisting` неіснуючого файлу** —
@@ -27,7 +29,7 @@
 - **`\setstretch` після `\fontsize` скасовує розмір.** `\setstretch` заново вибирає поточний
   розмір шрифту, тож `basicstyle=\fontsize{8}{9}\selectfont\setstretch{1}` дає код 14 пт.
   У власних стилях лістингів `\setstretch{1}` — першим.
-- **`listings` під XeLaTeX переставляє розділові знаки поруч із кирилицею** в рядках і
+- **`listings` під XeLaTeX переставляв розділові знаки поруч із кирилицею** в рядках і
   коментарях коду; `literate` і `extendedchars=false` не допомагають. Тому клас дає
   `\codeinput{file}` і `Verbatim` на `fvextra` (8 пт; інший розмір —
   `\codeinput[fontsize=\setstretch{1}\fontsize{10}{11.5}\selectfont]{file}`).

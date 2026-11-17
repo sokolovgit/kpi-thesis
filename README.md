@@ -30,8 +30,9 @@ with a normcontrol linter and a Claude Code plugin. Docs are in Ukrainian.*
 
 Потрібні:
 
-- **TeX Live** (XeLaTeX, latexmk): на macOS — MacTeX;
-- **шрифти Times New Roman і Courier New**;
+- **TeX Live** (LuaLaTeX, latexmk): на macOS — MacTeX;
+- **шрифти Times New Roman і Courier New** — без них клас підставить TeX Gyre Termes / Cursor
+  і попередить, але методичка вимагає саме Times New Roman;
 - [**just**](https://github.com/casey/just) — запуск команд;
 - **Python 3** — для `just check`;
 - **poppler** (`pdfunite`, `pdftotext`) — необов'язково: швидше зведення PDF диплома і
@@ -53,8 +54,8 @@ Times New Roman і Courier New у macOS уже є.
 <summary><b>Linux (Debian / Ubuntu)</b></summary>
 
 ```sh
-sudo apt install texlive-xetex texlive-latex-extra texlive-fonts-recommended \
-  texlive-plain-generic texlive-lang-cyrillic latexmk poppler-utils python3 ttf-mscorefonts-installer
+sudo apt install texlive-luatex texlive-latex-extra texlive-fonts-recommended \
+  texlive-plain-generic texlive-lang-cyrillic latexmk fonts-texgyre poppler-utils python3 ttf-mscorefonts-installer
 ```
 
 Шрифти Microsoft ставить `ttf-mscorefonts-installer` (погодитися з ліцензією).
@@ -164,10 +165,11 @@ just check                          # перевірки нормоконтро�
 
 ## Обмеження
 
-- **Лише XeLaTeX** (`fontspec`); pdfLaTeX не підтримується.
-- **Overleaf** не має Times New Roman і Courier New. Можна завантажити `.ttf` у проєкт і
-  вказати їх у `\setmainfont`, або замінити на TeX Gyre Termes / Cursor, але це вже не точно
-  те, що вимагає методичка. Основний сценарій — локальна збірка.
+- **LuaLaTeX** (`fontspec`). XeLaTeX ще збирає, з попередженням: команда LaTeX більше не
+  розвиває XeTeX і радить LuaTeX. pdfLaTeX не підтримується.
+- **Overleaf** (компілятор LuaLaTeX) не має Times New Roman і Courier New: клас візьме
+  TeX Gyre Termes / Cursor. Для здачі завантажте `.ttf` Times New Roman у проєкт і вкажіть
+  його в `\setmainfont`. Основний сценарій — локальна збірка.
 - Рецепти `just` — для bash; на Windows потрібен Git Bash або WSL.
 
 ## Структура репозиторію
