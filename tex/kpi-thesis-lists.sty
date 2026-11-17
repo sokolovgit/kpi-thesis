@@ -1,0 +1,18 @@
+% kpi-thesis-lists.sty — DSTU list labels.
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{kpi-thesis-lists}[2026/11/18 v2.0 DSTU list labels]
+\RequirePackage{enumitem}
+
+\def\kpi@ukralph#1{\ifcase#1\or а\or б\or в\or г\or д\or е\or ж\or и\or к\or л\or м\or н\or п\or р\or с\or т\or у\or ф\or х\or ц\or ш\or щ\or ю\or я\else\@ctrerr\fi}
+\def\kpi@ukrAlph#1{\ifcase#1\or А\or Б\or В\or Г\or Д\or Е\or Ж\or И\or К\or Л\or М\or Н\or П\or Р\or С\or Т\or У\or Ф\or Х\or Ц\or Ш\or Щ\or Ю\or Я\else\@ctrerr\fi}
+\def\ukralph#1{\expandafter\kpi@ukralph\csname c@#1\endcsname}
+\def\ukrAlph#1{\expandafter\kpi@ukrAlph\csname c@#1\endcsname}
+\AddEnumerateCounter{\ukralph}{\kpi@ukralph}{щ}
+
+\setlist{itemsep=0pt,parsep=0pt,topsep=0pt,partopsep=0pt}
+\setlist[itemize,1]{label=\textendash, labelindent=\parindent, leftmargin=0cm, itemindent=*}
+\setlist[itemize,2]{label=\textendash, labelindent=2\parindent, leftmargin=0cm, itemindent=*}
+\setlist[enumerate,1]{label=\ukralph*), labelindent=\parindent, leftmargin=0cm, itemindent=*}
+\setlist[enumerate,2]{label=\arabic*), labelindent=2\parindent, leftmargin=0cm, itemindent=*}
+
+\endinput
