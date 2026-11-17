@@ -177,8 +177,10 @@ just check                          # перевірки нормоконтро�
 | Шлях | Що |
 |---|---|
 | `tex/kpi-thesis.cls` | сторінка, шрифти, заголовки, підписи, `kpitable`, `where`, переліки, додатки, лістинги, підрахунок чисел |
-| `tex/kpi-titles.sty` | `\kpiset{...}`, титул, завдання, анотації, відомість, титули документів |
-| `tex/kpi-graphics.sty` | аркуші А3 зі штампом ЄСКД |
+| `tex/kpi-thesis-titles.sty` | `\kpiset{...}`, титул, завдання, анотації, відомість, титули документів |
+| `tex/kpi-thesis-graphics.sty` | аркуші А3 зі штампом ЄСКД |
+| `tex/kpi-thesis-{tables,where,lists,stats}.sty` | `kpitable`, `where`, переліки «а)», підрахунок для анотації; клас підключає їх сам |
+| `tex/kpi-titles.sty`, `tex/kpi-graphics.sty` | старі імена (до v2), лише підключають нові |
 | `templates/diploma/` | `meta.tex` + документи диплома: `title` (титул, завдання, анотації, відомість), `specification` (ТЗ), `explanatory-note` (ПЗ), `source-code` (текст програми), `test-plan` (ПМТ), `user-manual` (КК), `graphics` (графічний матеріал) |
 | `templates/coursework/` | курсова, один документ |
 | `scripts/check.py` | лінтер нормоконтролю (`tests/` — його тести) |

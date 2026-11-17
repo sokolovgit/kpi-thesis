@@ -7,7 +7,7 @@ allowed-tools: Bash(just build:*), Bash(just all), Bash(just check), Bash(just s
 # Дипломний проєкт і курсова (КПІ ФІОТ, кафедра ІПІ) у LaTeX
 
 Інструмент — репозиторій [kpi-thesis](https://github.com/sokolovgit/kpi-thesis): клас
-`kpi-thesis.cls` з пакетами `kpi-titles`, `kpi-graphics` (тека `tex/`), шаблони (`templates/`),
+`kpi-thesis.cls` з пакетами `kpi-thesis-titles`, `kpi-thesis-graphics` і дрібнішими `kpi-thesis-*` (тека `tex/`), шаблони (`templates/`),
 лінтер нормоконтролю (`scripts/check.py`) і `justfile`. Збирання — LuaLaTeX (XeLaTeX ще працює з попередженням).
 
 Основа — формат диплома кафедри ІПІ 2026 року, що пройшов нормоконтроль, з виправленнями
@@ -115,6 +115,7 @@ just check      # перевірки нормоконтролю
 | Псевдокод | `\kpisetup{algorithms}`, далі `algorithm` + `algpseudocode`: «Алгоритм 1.1 – Назва» |
 | Аркуш А3 | `\diagramPage{ССВ}{Назва схеми}{file.png}` або `\graphicsSheet{код}{назва}{вміст}` |
 | Заглушка | `\todo{...}` — червона в PDF, `just check` рахує |
+| Інший шрифт | `\documentclass[main-font={...}, mono-font={...}]{kpi-thesis}`; без Times New Roman / Courier New клас сам бере TeX Gyre Termes / Cursor і попереджає |
 
 Рисунки й таблиці за замовчуванням `[H]` (стоять де написані). Картинки — у `media/`.
 

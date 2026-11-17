@@ -71,4 +71,12 @@ test:
       fi
       echo "$kind: зібрано, check без помилок (крім заглушок \todo — у свіжому шаблоні це норма)"
     done
+    mkdir -p "$tmp/kpitable"
+    latexmk -lualatex -silent -outdir="$tmp/kpitable" "{{ROOT}}/tests/tex/kpitable.tex" >/dev/null 2>&1 \
+      || { grep -m5 -A3 '^!' "$tmp/kpitable/kpitable.log"; echo "kpitable: збірка впала"; exit 1; }
+    if command -v pdftotext >/dev/null; then
+      pdftotext "$tmp/kpitable/kpitable.pdf" - | grep -q "Продовження таблиці 1.1" \
+        || { echo "kpitable: немає «Продовження таблиці 1.1» на другій сторінці"; exit 1; }
+      echo "kpitable: продовження на наступній сторінці є"
+    fi
     echo "OK. PDF шаблонів: $tmp"
