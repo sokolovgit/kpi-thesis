@@ -9,7 +9,10 @@
 
 \newtotcounter{graphicsSheetNumber}
 
-\newcommand{\kpi@setpdfpaper}[2]{\pdfpagewidth=#1\relax\pdfpageheight=#2\relax}
+% LuaTeX has \pagewidth instead of XeTeX's \pdfpagewidth.
+\newcommand{\kpi@setpdfpaper}[2]{%
+  \ifdefined\pagewidth \pagewidth=#1\relax \pageheight=#2\relax
+  \else \pdfpagewidth=#1\relax \pdfpageheight=#2\relax \fi}
 \newcommand{\useTitlePaper}{%
   \kpi@setpdfpaper{210mm}{297mm}%
   \newgeometry{left=20mm,right=20mm,top=20mm,bottom=20mm}%

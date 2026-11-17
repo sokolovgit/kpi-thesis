@@ -8,7 +8,7 @@ allowed-tools: Bash(just build:*), Bash(just all), Bash(just check), Bash(just s
 
 Інструмент — репозиторій [kpi-thesis](https://github.com/sokolovgit/kpi-thesis): клас
 `kpi-thesis.cls` з пакетами `kpi-titles`, `kpi-graphics` (тека `tex/`), шаблони (`templates/`),
-лінтер нормоконтролю (`scripts/check.py`) і `justfile`. Збирання — XeLaTeX.
+лінтер нормоконтролю (`scripts/check.py`) і `justfile`. Збирання — LuaLaTeX (XeLaTeX ще працює з попередженням).
 
 Основа — формат диплома кафедри ІПІ 2026 року, що пройшов нормоконтроль, з виправленнями
 зауважень, які в ньому знайшлися. Правила: методичка кафедри 2024 → ДСТУ 3008:2015 → ДСТУ 8302:2015 → ЄСПД.
@@ -111,7 +111,7 @@ just check      # перевірки нормоконтролю
 | Пояснення до формули | `\begin{where} M & маса, кг; \\ F & сила, Н. \end{where}` |
 | Переліки | `itemize` → «–»; `enumerate` → «а)», вкладений → «1)» |
 | Додатки | `\appendices`, далі `\appendix{Назва}` або `\appendixpdf{Звіт подібності}{../media/report.pdf}` (шлях — від файлу документа) |
-| Код у тексті програми | `\codefile{path}{задача}` + `\codeinput[firstline=..,lastline=..]{../../repo/file}`; код у тексті — середовище `Verbatim`. Обидва — `fvextra`, 8 пт (`fontsize=` змінює). `listings` під XeLaTeX псує кирилицю в коментарях |
+| Код у тексті програми | `\codefile{path}{задача}` + `\codeinput[firstline=..,lastline=..]{../../repo/file}`; код у тексті — середовище `Verbatim`. Обидва — `fvextra`, 8 пт (`fontsize=` змінює). `listings` під XeLaTeX псував кирилицю в коментарях |
 | Псевдокод | `\kpisetup{algorithms}`, далі `algorithm` + `algpseudocode`: «Алгоритм 1.1 – Назва» |
 | Аркуш А3 | `\diagramPage{ССВ}{Назва схеми}{file.png}` або `\graphicsSheet{код}{назва}{вміст}` |
 | Заглушка | `\todo{...}` — червона в PDF, `just check` рахує |
@@ -183,4 +183,4 @@ just check      # перевірки нормоконтролю
 - `references/setup.md` — перше налаштування: інструменти, клон, `just install`, `just test`.
 - `references/requirements.md` — вимоги з номерами пунктів методички й ДСТУ, розбіжності між
   ними, посилання на першоджерела.
-- `references/gotchas.md` — граблі LaTeX/XeLaTeX, на які вже наступили.
+- `references/gotchas.md` — граблі LaTeX/LuaLaTeX, на які вже наступили.

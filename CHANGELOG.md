@@ -3,6 +3,25 @@
 Версії класу — у `\ProvidesClass` / `\ProvidesPackage` (`tex/`) і в git-тегах.
 Оновлення: `git pull` у клоні репозиторію; плагін — `/plugin marketplace update kpi-thesis`.
 
+## v2.0.0 — не випущено
+
+Рушій — LuaLaTeX (#19). Команда LaTeX більше не розвиває XeTeX і радить LuaTeX
+([LaTeX News 40](https://www.latex-project.org/news/latex2e-news/ltnews40.pdf)).
+- Шаблони збираються `lualatex` (`$pdf_mode = 4` у `.latexmkrc`). XeLaTeX ще працює, клас
+  лише попереджає; pdfLaTeX — зрозуміла помилка замість збою fontspec.
+- Без Times New Roman / Courier New (Overleaf, Linux без mscorefonts) клас бере TeX Gyre
+  Termes / Cursor і попереджає, що для здачі потрібен Times New Roman.
+- Аркуші А3 і зведення PDF без poppler працюють під LuaLaTeX.
+
+### Перехід з 1.3
+
+- Нічого не обов'язково: робота з `xelatex` у `.latexmkrc` збирається як раніше, з попередженням.
+- Щоб перейти на LuaLaTeX, у `.latexmkrc` роботи: `$pdf_mode = 4;` і
+  `$lualatex = 'lualatex -interaction=nonstopmode -file-line-error -synctex=1 %O %S';`
+  замість рядка з `xelatex`. Розкладка може зсунутися (рисунок чи таблиця переходить на іншу
+  сторінку) — роботу, що вже на здачі, краще не перемикати.
+- Linux: `texlive-luatex` замість `texlive-xetex`.
+
 ## v1.3.0 — 2026-11-15
 
 Змінює вигляд PDF:

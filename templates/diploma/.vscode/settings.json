@@ -1,5 +1,5 @@
 {
-  // LaTeX Workshop: build with the template's .latexmkrc (XeLaTeX, output in build/).
+  // LaTeX Workshop: build with the template's .latexmkrc (LuaLaTeX, output in build/).
   // Its default recipe passes -outdir, which would move the files the title page reads its numbers from.
   "latex-workshop.latex.recipes": [{ "name": "latexmk (kpi-thesis)", "tools": ["latexmk-kpi"] }],
   "latex-workshop.latex.tools": [

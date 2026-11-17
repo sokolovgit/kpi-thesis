@@ -10,7 +10,7 @@
   "license": "MIT",
   "keywords": [
     "latex",
-    "xelatex",
+    "lualatex",
     "thesis",
     "diploma",
     "coursework",

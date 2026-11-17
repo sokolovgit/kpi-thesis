@@ -38,15 +38,15 @@ all:
     if command -v pdfunite >/dev/null; then
       pdfunite $pdfs "build/{{OUT}}.pdf"
     else
-      # no poppler: merge with XeLaTeX itself, each page keeping its own size (A3 sheets stay A3)
+      # no poppler: merge with LuaLaTeX itself, each page keeping its own size (A3 sheets stay A3)
       { echo '\documentclass{article}\usepackage{graphicx}\hoffset=-1in\voffset=-1in'
-        echo '\newcount\pgs\newcount\pg\def\addpdf#1{\pgs=\XeTeXpdfpagecount"#1"\relax\pg=0'
+        echo '\newcount\pgs\newcount\pg\def\addpdf#1{\saveimageresource{#1}\pgs=\lastsavedimageresourcepages\pg=0'
         echo '\loop\ifnum\pg<\pgs\advance\pg 1\setbox0\hbox{\includegraphics[page=\the\pg]{#1}}'
-        echo '\pdfpagewidth=\wd0\pdfpageheight=\ht0\shipout\box0\repeat}'
+        echo '\pagewidth=\wd0\pageheight=\ht0\shipout\box0\repeat}'
         echo '\begin{document}'
         for f in $pdfs; do echo "\\addpdf{../$f}"; done
         echo '\end{document}'; } > build/merge.tex
-      (cd build && xelatex -interaction=batchmode merge.tex >/dev/null)
+      (cd build && lualatex -interaction=batchmode merge.tex >/dev/null)
       mv build/merge.pdf "build/{{OUT}}.pdf"
       rm -f build/merge.*
     fi
