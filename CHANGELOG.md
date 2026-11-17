@@ -3,7 +3,7 @@
 Версії класу — у `\ProvidesClass` / `\ProvidesPackage` (`tex/`) і в git-тегах.
 Оновлення: `git pull` у клоні репозиторію; плагін — `/plugin marketplace update kpi-thesis`.
 
-## v2.0.0 — не випущено
+## v2.0.0 — 2026-11-17
 
 Рушій — LuaLaTeX (#19). Команда LaTeX більше не розвиває XeTeX і радить LuaTeX
 ([LaTeX News 40](https://www.latex-project.org/news/latex2e-news/ltnews40.pdf)).
