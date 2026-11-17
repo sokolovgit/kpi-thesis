@@ -42,7 +42,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
             texlive-luatex texlive-latex-extra texlive-fonts-recommended texlive-plain-generic texlive-lang-cyrillic \
-            latexmk fontconfig
+            latexmk fonts-texgyre fontconfig
           ! fc-list | grep -q "Times New Roman"
       - uses: extractions/setup-just@v2
       - run: just install

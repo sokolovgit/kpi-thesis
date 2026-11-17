@@ -29,7 +29,7 @@
      - можна з Claude: `brew install just poppler`.
    - Linux (Debian/Ubuntu), сам: `sudo apt install texlive-luatex texlive-latex-extra
      texlive-fonts-recommended texlive-plain-generic texlive-lang-cyrillic latexmk
-     poppler-utils python3 ttf-mscorefonts-installer`. `just` ≥ 1.21 — бінарник із
+     fonts-texgyre poppler-utils python3 ttf-mscorefonts-installer`. `just` ≥ 1.21 — бінарник із
      https://github.com/casey/just/releases (в apt часто старий або відсутній).
    - Windows: TeX Live (https://tug.org/texlive/windows.html) і Git for Windows ставить сам
      (усі команди далі — у Git Bash); потім `winget install Casey.Just` і

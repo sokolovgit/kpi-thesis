@@ -55,7 +55,7 @@ Times New Roman і Courier New у macOS уже є.
 
 ```sh
 sudo apt install texlive-luatex texlive-latex-extra texlive-fonts-recommended \
-  texlive-plain-generic texlive-lang-cyrillic latexmk poppler-utils python3 ttf-mscorefonts-installer
+  texlive-plain-generic texlive-lang-cyrillic latexmk fonts-texgyre poppler-utils python3 ttf-mscorefonts-installer
 ```
 
 Шрифти Microsoft ставить `ttf-mscorefonts-installer` (погодитися з ліцензією).
