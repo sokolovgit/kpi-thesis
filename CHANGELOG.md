@@ -10,6 +10,11 @@
 - `just release-check` звіряє версії перед релізом, `just ctan-submit <email>` подає на CTAN;
   процес описано в `docs/RELEASING.md`.
 
+Overleaf (#31):
+- Кнопка «Open in Overleaf» у README відкриває шаблон курсової з останнього релізу.
+- README і граблі: в Overleaf є Times New Roman і Courier New, тож шаблон там збирається тими
+  шрифтами, що вимагає методичка, без завантаження `.ttf`.
+
 ## v2.0.0 — 2026-11-17
 
 Рушій — LuaLaTeX (#19). Команда LaTeX більше не розвиває XeTeX і радить LuaTeX

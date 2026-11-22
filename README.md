@@ -85,6 +85,16 @@ just install        # клас стає видимим для TeX (TEXMFHOME)
 just test           # необов'язково: збирає обидва шаблони, має закінчитися рядком OK
 ```
 
+### Overleaf
+
+[![Open in Overleaf](https://img.shields.io/badge/Open%20in-Overleaf-47A141?logo=overleaf&logoColor=white)](https://www.overleaf.com/docs?snip_uri=https://github.com/sokolovgit/kpi-thesis/releases/latest/download/kpi-thesis-coursework-overleaf.zip&engine=lualatex)
+
+Кнопка відкриває шаблон курсової з останнього релізу як новий проєкт Overleaf (потрібен вхід в
+акаунт). Те саме вручну: `kpi-thesis-coursework-overleaf.zip` з
+[релізів](https://github.com/sokolovgit/kpi-thesis/releases) → New Project → Upload Project.
+Компілятор — LuaLaTeX (Menu → Compiler), шрифти Times New Roman і Courier New в Overleaf є.
+`just check` і плагін в Overleaf не працюють: для них — локальна збірка.
+
 ### Лише клас: TeX Live, MiKTeX, CTAN
 
 Клас є на [CTAN](https://ctan.org/pkg/kpi-thesis), у TeX Live і MiKTeX: `tlmgr install kpi-thesis`
@@ -175,12 +185,8 @@ just check                          # перевірки нормоконтро�
 
 - **LuaLaTeX** (`fontspec`). XeLaTeX ще збирає, з попередженням: команда LaTeX більше не
   розвиває XeTeX і радить LuaTeX. pdfLaTeX не підтримується.
-- **Overleaf** (компілятор LuaLaTeX) не має Times New Roman і Courier New: клас візьме
-  TeX Gyre Termes / Cursor. Для здачі завантажте чотири `.ttf` Times New Roman у проєкт і
-  підключіть у преамбулі: `\setmainfont{times.ttf}[BoldFont=timesbd.ttf, ItalicFont=timesi.ttf,
-  BoldItalicFont=timesbi.ttf]` (попередження класу про шрифт тоді можна не зважати). Готовий проєкт курсової — `kpi-thesis-coursework-overleaf.zip` у
-  [релізах](https://github.com/sokolovgit/kpi-thesis/releases) (New Project → Upload Project).
-  Диплом — кілька документів зі спільним `meta.tex`, тож його основний сценарій — локальна збірка.
+- **Overleaf** — лише курсова (див. «Overleaf» вище). Диплом — кілька документів зі спільним
+  `meta.tex` і зведенням в один PDF, тож його основний сценарій — локальна збірка.
 - Рецепти `just` — для bash; на Windows потрібен Git Bash або WSL.
 
 ## Структура репозиторію
