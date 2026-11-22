@@ -3,7 +3,7 @@
 Версії класу — у `\ProvidesClass` / `\ProvidesPackage` (`tex/`) і в git-тегах.
 Оновлення: `git pull` у клоні репозиторію; плагін — `/plugin marketplace update kpi-thesis`.
 
-## v2.1.0 — не випущено
+## v2.1.0 — 2026-11-22
 
 Список джерел за ДСТУ 8302:2015 з `.bib` (#33):
 - Стиль biblatex `kpi-thesis-dstu`: книги (1–3 автори в заголовку, 4+ — з назви, «та ін.»), статті,

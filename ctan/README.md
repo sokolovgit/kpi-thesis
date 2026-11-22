@@ -19,6 +19,8 @@ environment, lists use Ukrainian labels.
 - `kpi-thesis-graphics.sty` — A3 sheets with the ESKD title block;
 - `kpi-thesis-tables.sty`, `kpi-thesis-where.sty`, `kpi-thesis-lists.sty`,
   `kpi-thesis-stats.sty` — loaded by the class, usable on their own;
+- `kpi-thesis-dstu.bbx`, `kpi-thesis-dstu.cbx` — biblatex style per DSTU 8302:2015
+  (`\kpisetup{bibliography=biblatex, bib-resource=sources.bib}`; needs biber);
 - `kpi-titles.sty`, `kpi-graphics.sty` — the pre-2.0 names of the two packages above;
 - `doc/kpi-thesis-doc.pdf` — documentation (in Ukrainian, the language of the documents).
 
