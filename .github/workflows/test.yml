@@ -77,6 +77,7 @@ jobs:
           just ctan
           files=$(unzip -Z1 build/kpi-thesis.zip)
           for f in kpi-thesis/README.md kpi-thesis/LICENSE kpi-thesis/kpi-thesis.cls \
+                   kpi-thesis/kpi-thesis-dstu.bbx kpi-thesis/kpi-thesis-dstu.cbx \
                    kpi-thesis/doc/kpi-thesis-doc.pdf kpi-thesis/doc/kpi-thesis-doc.tex; do
             echo "$files" | grep -qx "$f" || { echo "missing $f"; exit 1; }
           done
