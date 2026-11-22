@@ -205,6 +205,45 @@ class BiblatexTest(unittest.TestCase):
         self.assertEqual(code, 1)
         self.assertIn("не за алфавітом", out)
 
+    def test_cite_variants_and_multicite(self):
+        code, out = run(self.files(r"\Parencite[см.][с.~5]{a} і \cites[1]{b}{nope}."))
+        self.assertEqual(code, 1)
+        self.assertIn("\\cite{nope}", out)
+        self.assertNotIn("\\cite{b}", out)
+
+    def test_several_bib_resources(self):
+        files = self.files(r"\cite{a} \cite{c}", "\\kpisetup{bibliography=biblatex, bib-resource={sources.bib,more.bib}}\n")
+        files["more.bib"] = "@book(c,\n  title = {Третє},\n)\n"
+        code, out = run(files)
+        self.assertEqual(code, 0, out)
+
+    def test_bib_with_bom_and_todo(self):
+        files = self.files(r"\cite{a}")
+        files["sources.bib"] = "\ufeff@book{a,\n  title = {\\todo{Назва}},\n}\n"
+        code, out = run(files)
+        self.assertEqual(code, 1)
+        self.assertNotIn("немає у файлі джерел", out)
+        self.assertIn("sources.bib:2", out)
+        self.assertIn("заглушок \\todo", out)
+
+    def test_biber_warnings_from_blg(self):
+        files = self.files(r"\cite{a}")
+        files["build/main.log"] = "This is LuaHBTeX\n"
+        files["build/main.blg"] = (
+            "[116] Biber.pm:132> WARN - Duplicate entry key 'a' in file 'sources.bib', skipping ...\n"
+            "[120] Utils.pm:479> ERROR - BibTeX subsystem: sources.bib, line 3, syntax error\n"
+        )
+        code, out = run(files)
+        self.assertIn("попередження: biber: Duplicate entry key", out)
+        self.assertIn("помилка: biber: BibTeX subsystem", out)
+
+    def test_alphabetical_thebibliography_multiline_items(self):
+        bib = "\n\\begin{thebibliography}{9}\n\\bibitem{a}\nШевченко Т. Кобзар.\n\\bibitem{b}\nАндрухович Ю. Рекреації.\n\\end{thebibliography}\n"
+        files = doc(r"\cite{a} \cite{b}" + bib)
+        files["main.tex"] = files["main.tex"].replace("}\n\\begin{document}", "}\n\\kpisetup{sources=alphabetical}\n\\begin{document}", 1)
+        code, out = run(files)
+        self.assertIn("не за алфавітом", out)
+
     def test_alphabetical_order_ok_and_cyrillic_before_latin(self):
         self.assertLess(check.sort_key("Ґудзь"), check.sort_key("Дума"))
         self.assertLess(check.sort_key("Їжак"), check.sort_key("Йорданія"))

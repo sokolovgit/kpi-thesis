@@ -75,8 +75,7 @@
 \justifying
 
 % --- Packages used across documents ---
-% normalem: \emph stays italic; ulem is here only for \uline on the title forms.
-\RequirePackage[normalem]{ulem}
+\RequirePackage{ulem}
 \setlength{\ULdepth}{2pt}
 \RequirePackage{makecell}
 \RequirePackage{multirow}
@@ -88,8 +87,8 @@
 \RequirePackage{listings}
 \RequirePackage{fvextra}
 \RequirePackage{xcolor}
-% cite only for the hand-written thebibliography; \kpisetup{bibliography=biblatex} replaces it.
-\AddToHook{begindocument/before}{\@ifpackageloaded{biblatex}{}{\RequirePackage{cite}}}
+% For the hand-written thebibliography; \kpisetup{bibliography=biblatex} hides it from biblatex.
+\RequirePackage{cite}
 % URLs break after / . - _ and the like, never mid-word; \kpisetup{url-breaks=anywhere} for xurl.
 \RequirePackage[hyphens]{url}
 \urlstyle{same}
@@ -319,6 +318,8 @@
       {
         \@ifpackageloaded { biblatex } { }
           {
+            % biblatex refuses to load after cite; its own \cite replaces the one from cite.
+            \cs_undefine:c { ver@cite.sty }
             \use:e
               {
                 \exp_not:N \RequirePackage
@@ -327,6 +328,7 @@
               }
             \DefineBibliographyStrings { ukrainian } { references = { СПИСОК~ВИКОРИСТАНИХ~ДЖЕРЕЛ } }
             \defbibheading { bibliography } [ \refname ] { \structural { ##1 } }
+            \AtBeginBibliography { \setcounter { kpi@sources } { 0 } }
             \AtEveryBibitem { \stepcounter { kpi@sources } }
           }
         \clist_map_inline:Nn \l__kpi_bibresources_clist { \addbibresource { ##1 } }
@@ -339,7 +341,11 @@
       { \bool_set:Nn \l__kpi_biblatex_bool { \int_compare_p:nNn { \l_keys_choice_int } = { 2 } } },
     bib-resource   .code:n = { \clist_put_right:Nn \l__kpi_bibresources_clist {#1} },
     sources        .choices:nn = { citation, alphabetical, chronological }
-      { \tl_set:Ne \l__kpi_sorting_tl { \clist_item:nn { none, nty, ynt } { \l_keys_choice_int } } },
+      {
+        \tl_set:Ne \l__kpi_sorting_tl { \clist_item:nn { none, nty, ynt } { \l_keys_choice_int } }
+        \@ifpackageloaded { biblatex }
+          { \use:e { \exp_not:N \ExecuteBibliographyOptions { sorting = \l__kpi_sorting_tl } } } { }
+      },
     left-margin    .code:n = { \geometry { left = #1 } },
     hyphenation    .choices:nn = { true, false }
       { \int_compare:nNnT { \l_keys_choice_int } = { 2 } { \kpi@nohyphenation } },

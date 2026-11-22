@@ -51,10 +51,11 @@
 - **biblatex: «Citation 'x' undefined» після першої збірки.** latexmk запускає biber сам
   (бачить `.bcf`); якщо ні — нема `biber` (Linux: `apt install biber texlive-bibtex-extra`).
   Помилки розбору `.bib` — у `build/*.blg`, `just check` показує їх як «biber: …».
-- **biblatex і пакет `cite` несумісні.** Клас вантажить `cite` лише без biblatex; власний
-  `\usepackage{cite}` у преамбулі роботи на biblatex — прибрати.
-- **`\uline` / `ulem`.** Клас вантажить `ulem` з `normalem`: `\emph` лишається курсивом (без
-  цього biblatex підкреслював би назви журналів).
+- **biblatex і пакет `cite` несумісні.** Клас вантажить `cite` (налаштування `\citepunct` тощо в
+  старих роботах працюють), а з `bibliography=biblatex` ховає його від biblatex: `\cite` тоді
+  biblatex-івський.
+- **`\emph` підкреслює.** Клас вантажить `ulem` без `normalem`, тож `\emph` —
+  підкреслення; стиль ДСТУ ставить курсив через `\textit`, назви журналів не страждають.
 - **Zed / texlab.** texlab не пов'язує `\cite` з `\bibitem` в іншому файлі (кожне джерело в
   розділі — «Undefined reference») і завжди вважає `\bibitem` невикористаними. Шаблони несуть
   `.zed/settings.json`, що ховає ці два повідомлення; биті посилання ловить `just check`.

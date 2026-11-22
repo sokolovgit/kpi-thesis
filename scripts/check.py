@@ -72,9 +72,24 @@ def loc(row, root):
 
 
 CITE_RE = re.compile(
-    r"\\(?:cite|parencite|textcite|autocite|footcite|supercite|nocite)[pt]?\*?"
-    r"(?:\[[^\]]*\]){0,2}\{([^}]+)\}"
+    r"\\(?:nocite|(?:[Cc]ite|[Pp]arencite|[Tt]extcite|[Aa]utocite|[Ff]ootcite|[Ss]upercite|[Ff]ullcite)(s?)[pt]?)\*?"
 )
+CITE_ARG_RE = re.compile(r"\s*(?:\([^)]*\)|\[[^\]]*\])*\s*\{([^}]+)\}")
+
+
+def cited_keys(text):
+    """Keys of every citation command, including \\cites{a}{b} and \\parencite[см.][с. 5]{x}."""
+    for m in CITE_RE.finditer(text):
+        pos, groups = m.end(), 0
+        while True:
+            arg = CITE_ARG_RE.match(text, pos)
+            if not arg:
+                break
+            for key in arg.group(1).split(","):
+                yield key.strip()
+            pos, groups = arg.end(), groups + 1
+            if not m.group(1):
+                break
 UK_ALPHABET = "абвгґдеєжзиіїйклмнопрстуфхцчшщьюя"
 
 
@@ -89,14 +104,25 @@ def bib_entries(rows, doc):
     names = []
     for _, _, text in rows:
         names += re.findall(r"\\addbibresource(?:\[[^\]]*\])?\{([^}]+)\}", text)
-        names += re.findall(r"bib-resource\s*=\s*\{?([^,}\s]+)", text)
+        for value in re.findall(r"bib-resource\s*=\s*(\{[^}]*\}|[^,}\s]+)", text):
+            names += [n.strip() for n in value.strip("{}").split(",") if n.strip()]
     keys = {}
     for name in names:
         bib = doc.parent / name
-        if bib.exists():
-            text = bib.read_text(encoding="utf-8")
-            for m in re.finditer(r"^\s*@\w+\s*\{\s*([^,\s]+)\s*,", text, re.M):
-                keys[m.group(1)] = (bib, text[: m.start()].count("\n") + 1)
+        if not bib.exists():
+            continue
+        raw = bib.read_bytes()
+        try:
+            text = raw.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            report(ERR, bib.name, "файл джерел не в UTF-8: збережіть його як UTF-8 (biber читатиме кракозябри)")
+            text = raw.decode("utf-8", errors="replace")
+        for n, line in enumerate(text.splitlines(), 1):
+            if re.search(r"\\todo\{", line):
+                todos.setdefault(bib, []).append(n)
+        for m in re.finditer(r"^\s*@(\w+)\s*[{(]\s*([^,\s]+)\s*,", text, re.M):
+            if m.group(1).lower() not in ("string", "comment", "preamble"):
+                keys[m.group(2)] = (bib, text[: m.start()].count("\n") + 1)
     return names, keys
 
 
@@ -110,14 +136,17 @@ def check_bibliography(rows, root, doc=None):
         text = row[2]
         if "\\begin{thebibliography}" in text:
             in_bib = True
-        for m in re.finditer(r"\\bibitem(?:\[[^\]]*\])?\{([^}]+)\}(.*)", text):
-            bib.append((m.group(1).strip(), row, m.group(2)))
+        items = list(re.finditer(r"\\bibitem(?:\[[^\]]*\])?\{([^}]+)\}(.*)", text))
+        for m in items:
+            bib.append([m.group(1).strip(), row, m.group(2)])
+        if in_bib and not items and bib and "\\end{thebibliography}" not in text:
+            bib[-1][2] += " " + text.strip()
+        if "\\end{thebibliography}" in text:
+            in_bib = False
         if not in_bib:
-            for m in CITE_RE.finditer(text):
-                for key in m.group(1).split(","):
-                    key = key.strip()
-                    if key not in [c for c, _ in cites]:
-                        cites.append((key, row))
+            for key in cited_keys(text):
+                if key not in [c for c, _ in cites]:
+                    cites.append((key, row))
     if biblatex and doc is not None:
         names, keys = bib_entries(rows, doc)
         if not names:
@@ -152,7 +181,7 @@ def check_bibliography(rows, root, doc=None):
             keyf = lambda e: sort_key(e[2])
             what = "за алфавітом"
         else:
-            keyf = lambda e: int((re.search(r"\b(1[89]\d\d|20\d\d)\b", e[2]) or [0, 9999])[1])
+            keyf = lambda e: int((re.search(r"(?<![:\d])\b(1[89]\d\d|20\d\d)\b", e[2]) or [0, 9999])[1])
             what = "за роком видання"
         for (a, row, rest), (b, _, _) in zip(listed, sorted(listed, key=keyf)):
             if a != b:
@@ -366,7 +395,7 @@ def check_log(doc, root):
     blg = log.with_suffix(".blg")
     if blg.exists():
         for line in blg.read_text(encoding="utf-8", errors="replace").splitlines():
-            m = re.search(r"\] \S+ - (WARN|ERROR) - (.+)", line)
+            m = re.search(r"\]\s+\S+>\s+(WARN|ERROR) - (.+)", line)
             if m:
                 report(ERR if m.group(1) == "ERROR" else WARN, str(blg.relative_to(root)), f"biber: {m.group(2).strip()}")
     if "Rerun to get" in text or "Label(s) may have changed" in text:

@@ -33,13 +33,22 @@
 \DeclareStyleSourcemap{
   \maps[datatype=bibtex]{
     \map{
-      \step[fieldsource=author, match=\regexp{\sand\s.+\sand\s.+\sand\s}, final]
+      \step[fieldsource=author, match=\regexp{\A(?:[^\{\}]|\{[^\{\}]*\})*?\sand\s(?:[^\{\}]|\{[^\{\}]*\})*?\sand\s(?:[^\{\}]|\{[^\{\}]*\})*?\sand\s}, final]
+      \step[fieldset=options, fieldvalue={,useauthor=false}, append]
+    }
+    \map{
+      \step[fieldsource=author, match=\regexp{\sand\s+others\s*\Z}, final]
       \step[fieldset=options, fieldvalue={,useauthor=false}, append]
     }
     \map{
       \pertype{standard}
       \step[fieldsource=number, final]
       \step[fieldset=sorttitle, origfieldval]
+    }
+    \map{
+      \pertype{standard}
+      \step[fieldsource=number, match=\regexp{\A\{?[A-Za-z]}, final]
+      \step[fieldset=presort, fieldvalue={zz}]
     }
     \map{
       \step[fieldsource=author, match=\regexp{\A\{?[A-Za-z]}, final]
@@ -56,7 +65,7 @@
 % --- Strings ---------------------------------------------------------------------------------
 \NewBibliographyString{dstupages,dstupagetotal,dstuvolume,dstuvolumes,dstunumber,dstuissue,
   dstuedition,dstueditor,dstucompiler,dstutranslator,dstupatent,dstufrom,dstuversion,dstuurl,
-  dstuurlseen,dstudoi}
+  dstuurlseen,dstudoi,dstuchief,dstuorigfrom}
 \DefineBibliographyStrings{ukrainian}{
   dstupages      = {С\adddot},
   dstupagetotal  = {с\adddot},
@@ -74,6 +83,8 @@
   dstuurl        = {URL},
   dstuurlseen    = {дата звернення},
   dstudoi        = {DOI},
+  dstuchief      = {голов\adddot\addspace ред\adddot},
+  dstuorigfrom   = {з},
   andothers      = {та\addnbspace ін\adddot},
 }
 \DefineBibliographyStrings{english}{
@@ -93,7 +104,30 @@
   dstuurl        = {URL},
   dstuurlseen    = {дата звернення},
   dstudoi        = {DOI},
+  dstuchief      = {ed.-in-chief},
+  dstuorigfrom   = {from},
   andothers      = {et\addnbspace al\adddot},
+}
+\DefineBibliographyStrings{russian}{
+  dstupages      = {С\adddot},
+  dstupagetotal  = {с\adddot},
+  dstuvolume     = {Т\adddot},
+  dstuvolumes    = {т\adddot},
+  dstunumber     = {№},
+  dstuissue      = {Вып\adddot},
+  dstuedition    = {изд\adddot},
+  dstueditor     = {ред\adddot},
+  dstucompiler   = {сост\adddot},
+  dstutranslator = {пер\adddot},
+  dstupatent     = {пат\adddot},
+  dstufrom       = {от},
+  dstuversion    = {Версия},
+  dstuurl        = {URL},
+  dstuurlseen    = {дата звернення},
+  dstudoi        = {DOI},
+  dstuchief      = {гл\adddot\addspace ред\adddot},
+  dstuorigfrom   = {с},
+  andothers      = {и\addnbspace др\adddot},
 }
 
 % URLs and DOIs break only at their own break points, without stretching inside the line.
@@ -102,11 +136,13 @@
 % Ranges with «–» in every language (ukrainian.lbx would give «—»).
 \DefineBibliographyExtras{ukrainian}{\protected\def\bibrangedash{\textendash\nobreak}}
 \DefineBibliographyExtras{english}{\protected\def\bibrangedash{\textendash\nobreak}}
+\DefineBibliographyExtras{russian}{\protected\def\bibrangedash{\textendash\nobreak}}
 
 % --- Punctuation and names -------------------------------------------------------------------
 \renewcommand*{\newunitpunct}{\addperiod\space}
 \newcommand*{\kpidstucolon}{:}
 \newcommand*{\kpidstuslash}{/}
+\newcommand*{\kpidstusemicolon}{;}
 \renewcommand*{\subtitlepunct}{\addnbspace\kpidstucolon\space}
 \renewcommand*{\revsdnamepunct}{}
 \DeclareDelimFormat{multinamedelim}{\addcomma\space}
@@ -122,12 +158,15 @@
   \usebibmacro{name:andothers}}
 
 % --- Field formats ---------------------------------------------------------------------------
+% Italics without \emph: the class loads ulem, which underlines \emph.
+\renewcommand*{\mkbibemph}[1]{\textit{#1}}
 \DeclareFieldFormat*{title}{#1}
 \DeclareFieldFormat*{subtitle}{#1}
 \DeclareFieldFormat*{titleaddon}{#1}
 \DeclareFieldFormat{booktitle}{\textit{#1}}
 \DeclareFieldFormat{journaltitle}{\textit{#1}}
-\DeclareFieldFormat{maintitle}{#1}
+\DeclareFieldFormat*{maintitle}{#1}
+\DeclareFieldFormat*{part}{#1}
 \DeclareFieldFormat*{pages}{\bibstring{dstupages}\addnbspace#1}
 \DeclareFieldFormat*{pagetotal}{#1\addnbspace\bibstring{dstupagetotal}}
 \DeclareFieldFormat*{volume}{\bibstring{dstuvolume}\addnbspace#1}
@@ -137,11 +176,14 @@
 \DeclareFieldFormat[standard,patent,report]{number}{#1}
 \DeclareFieldFormat[legislation,legal]{number}{\bibstring{dstunumber}\addnbspace#1}
 \DeclareFieldFormat{issue}{\bibstring{dstuissue}\addnbspace#1}
+% The issue of an official gazette is its «№»; number is the act's own number.
+\DeclareFieldFormat[legislation,legal]{issue}{\bibstring{dstunumber}\addnbspace#1}
 \DeclareFieldFormat{version}{\bibstring{dstuversion}\addnbspace#1}
-\DeclareFieldFormat{doi}{\bibstring{dstudoi}\addcolon\space\url{#1}}
+\DeclareFieldFormat{doi}{\bibstring{dstudoi}\addcolon\space\href{https://doi.org/#1}{\nolinkurl{#1}}}
 \DeclareFieldFormat{url}{\bibstring{dstuurl}\addcolon\space\url{#1}}
 \DeclareFieldFormat{urldate}{\mkbibparens{\bibstring{dstuurlseen}\addcolon\space#1}}
 \DeclareFieldFormat{labelnumberwidth}{#1\bibrightparen}
+\DeclareListFormat{location}{\ifnumgreater{\value{listcount}}{1}{\addnbspace\kpidstusemicolon\space}{}#1}
 
 % Ukrainian ordinal for «2-ге вид.»: the ending follows the last digit; 11–19 and 40 are exceptions.
 \ExplSyntaxOn
@@ -169,7 +211,9 @@
   \ifinteger{#1}
     {\iffieldequalstr{langid}{english}
        {\mkbibordedition{#1}\addnbspace\bibstring{dstuedition}}
-       {\kpidstuordinal{#1}\addnbspace\bibstring{dstuedition}}}
+       {\iffieldequalstr{langid}{russian}
+          {#1-е\addnbspace\bibstring{dstuedition}}
+          {\kpidstuordinal{#1}\addnbspace\bibstring{dstuedition}}}}
     {#1}}
 
 % dd.mm.yyyy for every date the style prints in full.
@@ -178,12 +222,19 @@
   \iffieldundef{#1month}{}{\mkmonthzeros{\thefield{#1month}}.}%
   \thefield{#1year}}
 
+% «4 серп.» for a newspaper issue (ДСТУ 3582 month abbreviations).
+\newcommand*{\kpidstumonth}[1]{%
+  \ifcase#1\or січ.\or лют.\or берез.\or квіт.\or трав.\or черв.\or лип.\or серп.\or
+    верес.\or жовт.\or листоп.\or груд.\fi}
+
 % --- Building blocks -------------------------------------------------------------------------
 \newtoggle{kpi@many}
 \newtoggle{kpi@resp}
 \newbibmacro*{dstu:manyauthors}{%
   \togglefalse{kpi@many}%
-  \ifnameundef{author}{}{\ifnumgreater{\value{author}}{3}{\toggletrue{kpi@many}}{}}}
+  \ifnameundef{author}{}
+    {\ifnumgreater{\value{author}}{3}{\toggletrue{kpi@many}}{}%
+     \ifandothers{author}{\toggletrue{kpi@many}}{}}}
 
 % Heading: 1–3 authors, or nothing (the title opens the entry).
 \newbibmacro*{dstu:heading}{%
@@ -204,7 +255,7 @@
 % Statement of responsibility after «/»: 4+ authors as «І. Б. Прізвище та ін.», then editors or
 % compilers and translators, separated by « ; ».
 \newbibmacro*{dstu:respsep}{%
-  \iftoggle{kpi@resp}{\setunit{\addspace\addsemicolon\space}}{\setunit{\addnbspace\kpidstuslash\space}}%
+  \iftoggle{kpi@resp}{\setunit{\addnbspace\kpidstusemicolon\space}}{\setunit{\addnbspace\kpidstuslash\space}}%
   \toggletrue{kpi@resp}}
 \newbibmacro*{dstu:manyresp}{%
   \usebibmacro{dstu:manyauthors}%
@@ -214,25 +265,47 @@
 \newbibmacro*{dstu:editors}{%
   \ifnameundef{editor}{}
     {\usebibmacro{dstu:respsep}%
-     \printtext{\iffieldequalstr{editortype}{compiler}{\bibstring{dstucompiler}}{\bibstring{dstueditor}}}%
+     \printtext{\iffieldequalstr{editortype}{compiler}{\bibstring{dstucompiler}}
+       {\iffieldequalstr{editortype}{chief}{\bibstring{dstuchief}}{\bibstring{dstueditor}}}}%
      \setunit{\addspace}\printnames[dstu:resp]{editor}}}
+% «пер. з англ.»: the original language as a short adjective.
+\newcommand*{\kpidstulang}[1]{%
+  \ifstrequal{#1}{english}{англ.}{\ifstrequal{#1}{german}{нім.}{\ifstrequal{#1}{french}{франц.}{%
+  \ifstrequal{#1}{russian}{рос.}{\ifstrequal{#1}{polish}{пол.}{\ifstrequal{#1}{ukrainian}{укр.}{#1}}}}}}}
+\DeclareListFormat{origlanguage}{\kpidstulang{#1}}
+\newtoggle{kpi@orgresp}
+\toggletrue{kpi@orgresp}
 \newbibmacro*{dstu:resp}{%
   \togglefalse{kpi@resp}%
   \usebibmacro{dstu:manyresp}%
+  \iftoggle{kpi@orgresp}
+    {\ifboolexpr{test {\iflistundef{organization}} or test {\iflistundef{publisher}}}{}
+       {\usebibmacro{dstu:respsep}\printlist{organization}}}{}%
   \usebibmacro{dstu:editors}%
   \ifnameundef{translator}{}
     {\usebibmacro{dstu:respsep}%
-     \printtext{\bibstring{dstutranslator}}%
+     \printtext{\bibstring{dstutranslator}%
+       \iflistundef{origlanguage}{}{\addspace\bibstring{dstuorigfrom}\addspace\printlist{origlanguage}}}%
      \setunit{\addspace}\printnames[dstu:resp]{translator}}}
 
-% «Місто : Видавець, рік»; without a publisher «Місто, рік».
-\newbibmacro*{dstu:imprint}{%
+% «Місто : Видавець, рік»; «Місто, рік», «Видавець, рік» or just «рік» when parts are missing.
+\newbibmacro*{dstu:place+publisher+year}[1]{%
   \newunit\newblock
   \printlist{location}%
+  \iflistundef{#1}{}
+    {\iflistundef{location}{\newunit}{\setunit{\addnbspace\kpidstucolon\space}}%
+     \printlist{#1}}%
+  \ifboolexpr{test {\iflistundef{location}} and test {\iflistundef{#1}}}
+    {\newunit}{\setunit{\addcomma\space}}%
+  \printfield{year}%
+  \iffieldequalstr{entrysubtype}{newspaper}
+    {\iffieldundef{month}{}
+       {\setunit{\addperiod\space}\printtext{\iffieldundef{day}{}{\thefield{day}\addnbspace}\kpidstumonth{\thefield{month}}}}}
+    {}}
+\newbibmacro*{dstu:imprint}{%
   \iflistundef{publisher}
-    {\iflistundef{organization}{}{\setunit{\addnbspace\kpidstucolon\space}\printlist{organization}}}
-    {\setunit{\addnbspace\kpidstucolon\space}\printlist{publisher}}%
-  \setunit{\addcomma\space}\printfield{year}}
+    {\usebibmacro{dstu:place+publisher+year}{organization}}
+    {\usebibmacro{dstu:place+publisher+year}{publisher}}}
 
 \newbibmacro*{dstu:volume+pages}{%
   \newunit\printfield{volume}%
@@ -257,6 +330,10 @@
   \newunit\newblock\printfield{journaltitle}%
   \setunit{\subtitlepunct}\printfield{journalsubtitle}%
   \newunit\printfield{year}%
+  \iffieldequalstr{entrysubtype}{newspaper}
+    {\iffieldundef{month}{}
+       {\setunit{\addperiod\space}\printtext{\iffieldundef{day}{}{\thefield{day}\addnbspace}\kpidstumonth{\thefield{month}}}}}
+    {}%
   \newunit\printfield{volume}%
   \iffieldundef{issue}{}
     {\iffieldundef{volume}{\newunit}{\setunit{\addcomma\space}}\printfield{issue}}%
@@ -269,12 +346,23 @@
 % --- Drivers ---------------------------------------------------------------------------------
 \DeclareBibliographyDriver{book}{%
   \usebibmacro{dstu:heading}%
-  \usebibmacro{dstu:title}%
-  \usebibmacro{dstu:volumes}%
-  \usebibmacro{dstu:resp}%
-  \newunit\printfield{edition}%
-  \usebibmacro{dstu:imprint}%
-  \usebibmacro{dstu:volume+pages}%
+  \iffieldundef{maintitle}
+    {\usebibmacro{dstu:title}%
+     \usebibmacro{dstu:volumes}%
+     \usebibmacro{dstu:resp}%
+     \newunit\printfield{edition}%
+     \usebibmacro{dstu:imprint}%
+     \usebibmacro{dstu:volume+pages}}
+    {\printfield{maintitle}%
+     \setunit{\subtitlepunct}\printfield{mainsubtitle}%
+     \usebibmacro{dstu:volumes}%
+     \usebibmacro{dstu:resp}%
+     \newunit\printfield{edition}%
+     \usebibmacro{dstu:imprint}%
+     \newunit\printfield{volume}%
+     \setunit{\subtitlepunct}\usebibmacro{dstu:title}%
+     \newunit\printfield{pages}%
+     \newunit\printfield{pagetotal}}%
   \usebibmacro{dstu:finish}}
 \DeclareBibliographyAlias{mvbook}{book}
 \DeclareBibliographyAlias{collection}{book}
@@ -289,9 +377,7 @@
   \iffieldundef{type}{}{\setunit{\subtitlepunct}\printfield{type}}%
   \usebibmacro{dstu:resp}%
   \newunit\printfield{number}%
-  \newunit\newblock\printlist{location}%
-  \iflistundef{institution}{}{\setunit{\addnbspace\kpidstucolon\space}\printlist{institution}}%
-  \setunit{\addcomma\space}\printfield{year}%
+  \usebibmacro{dstu:place+publisher+year}{institution}%
   \usebibmacro{dstu:volume+pages}%
   \usebibmacro{dstu:finish}}
 
@@ -300,9 +386,7 @@
   \usebibmacro{dstu:title}%
   \setunit{\subtitlepunct}\printfield{type}%
   \usebibmacro{dstu:resp}%
-  \newunit\newblock\printlist{location}%
-  \iflistundef{institution}{}{\setunit{\addnbspace\kpidstucolon\space}\printlist{institution}}%
-  \setunit{\addcomma\space}\printfield{year}%
+  \usebibmacro{dstu:place+publisher+year}{institution}%
   \newunit\printfield{pagetotal}%
   \usebibmacro{dstu:finish}}
 
@@ -331,7 +415,7 @@
 \DeclareBibliographyAlias{inbook}{incollection}
 \DeclareBibliographyAlias{inreference}{incollection}
 
-% «ДСТУ 8302:2015. Назва. Чинний від 2016-07-01. Київ : ДП «УкрНДНЦ», 2016. 17 с.»
+% «ДСТУ 8302:2015. Назва. Чинний від 01.07.2016. Київ : ДП «УкрНДНЦ», 2016. 17 с.»
 \DeclareBibliographyDriver{standard}{%
   \printfield{number}%
   \newunit\usebibmacro{dstu:title}%
@@ -347,6 +431,7 @@
   \setunit{\subtitlepunct}\printfield{type}%
   \iffieldundef{year}{}{\setunit{\addspace}\printtext{\bibstring{dstufrom}\addspace\kpidstudate{}}}%
   \iffieldundef{number}{}{\setunit{\addspace}\printfield{number}}%
+  \clearfield{number}%
   \iffieldundef{journaltitle}{}{\usebibmacro{dstu:serial}}%
   \usebibmacro{dstu:finish}}
 \DeclareBibliographyAlias{legal}{legislation}
@@ -367,7 +452,9 @@
 \DeclareBibliographyDriver{online}{%
   \usebibmacro{dstu:heading}%
   \usebibmacro{dstu:title}%
+  \togglefalse{kpi@orgresp}%
   \usebibmacro{dstu:resp}%
+  \toggletrue{kpi@orgresp}%
   \newunit\printfield{version}%
   \newunit\newblock\printlist{organization}%
   \setunit{\addcomma\space}\printlist{publisher}%
