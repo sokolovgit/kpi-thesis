@@ -51,3 +51,33 @@ jobs:
           just new coursework /tmp/cw
           cd /tmp/cw && just build
           grep -q "TeX Gyre Termes" build/main.log
+
+  # The release artifacts: the Overleaf zip must build on its own, the CTAN zip must hold
+  # exactly the package files.
+  packaging:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install TeX Live
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            texlive-luatex texlive-latex-extra texlive-fonts-recommended texlive-plain-generic texlive-lang-cyrillic \
+            latexmk fonts-texgyre fontconfig zip unzip
+      - uses: extractions/setup-just@v2
+      - name: Overleaf zip builds without the installed class
+        run: |
+          just overleaf
+          mkdir /tmp/ovl && cd /tmp/ovl && unzip -q "$GITHUB_WORKSPACE/build/kpi-thesis-coursework-overleaf.zip"
+          TEXMFHOME=/nonexistent latexmk -interaction=nonstopmode main.tex
+          test -s main.pdf
+          grep -q "kpi-thesis.cls" main.log && ! grep -q "texmf/tex/latex/kpi-thesis" main.log
+      - name: CTAN zip holds the package files only
+        run: |
+          just ctan
+          files=$(unzip -Z1 build/kpi-thesis.zip)
+          for f in kpi-thesis/README.md kpi-thesis/LICENSE kpi-thesis/kpi-thesis.cls \
+                   kpi-thesis/doc/kpi-thesis-doc.pdf kpi-thesis/doc/kpi-thesis-doc.tex; do
+            echo "$files" | grep -qx "$f" || { echo "missing $f"; exit 1; }
+          done
+          ! echo "$files" | grep -E '/\.|\.(aux|log|fls|fdb_latexmk|synctex\.gz|out|toc)$'

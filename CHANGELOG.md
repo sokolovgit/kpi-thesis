@@ -3,6 +3,13 @@
 Версії класу — у `\ProvidesClass` / `\ProvidesPackage` (`tex/`) і в git-тегах.
 Оновлення: `git pull` у клоні репозиторію; плагін — `/plugin marketplace update kpi-thesis`.
 
+## v2.1.0 — не випущено
+
+Реліз (#29):
+- CI збирає zip для Overleaf окремо від встановленого класу й перевіряє вміст архіву для CTAN.
+- `just release-check` звіряє версії перед релізом, `just ctan-submit <email>` подає на CTAN;
+  процес описано в `docs/RELEASING.md`.
+
 ## v2.0.0 — 2026-11-17
 
 Рушій — LuaLaTeX (#19). Команда LaTeX більше не розвиває XeTeX і радить LuaTeX
