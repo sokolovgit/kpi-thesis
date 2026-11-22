@@ -87,7 +87,7 @@ ctan:
     set -euo pipefail
     rm -rf build/ctan build/kpi-thesis.zip
     mkdir -p build/ctan/kpi-thesis/doc build/doc
-    latexmk -lualatex -silent -outdir="{{ROOT}}/build/doc" docs/kpi-thesis-doc.tex >/dev/null \
+    TEXINPUTS="{{ROOT}}/tex//:" latexmk -lualatex -silent -outdir="{{ROOT}}/build/doc" docs/kpi-thesis-doc.tex >/dev/null \
       || { grep -m5 -A3 '^!' build/doc/kpi-thesis-doc.log; exit 1; }
     cp tex/*.cls tex/*.sty build/ctan/kpi-thesis/
     cp ctan/README.md LICENSE build/ctan/kpi-thesis/
@@ -104,6 +104,21 @@ ctan-validate email: ctan
     sed "s|^\\\\email{}|\\\\email{$e}|" ctan/kpi-thesis.pkg > build/ctan/kpi-thesis.pkg
     cd build/ctan && PERL_LWP_SSL_CA_FILE="${PERL_LWP_SSL_CA_FILE:-/etc/ssl/cert.pem}" \
       ctan-o-mat --validate kpi-thesis.pkg
+
+# Чи узгоджені версії: CHANGELOG, \Provides* у tex/, ctan/kpi-thesis.pkg, документація (just release-check v2.1.0)
+release-check tag="":
+    python3 scripts/release_check.py {{ if tag == "" { "" } else { "--tag " + tag } }}
+
+# Подати реліз на CTAN: перевірки, архів, валідація на сервері, підтвердження, подання
+ctan-submit email: release-check (ctan-validate email)
+    #!/usr/bin/env bash
+    set -euo pipefail
+    grep -q '^\\update{true}' build/ctan/kpi-thesis.pkg || { echo "ctan/kpi-thesis.pkg: потрібен \\update{true}"; exit 1; }
+    awk '/^\\begin{announcement}/,/^\\end{announcement}/' build/ctan/kpi-thesis.pkg
+    read -r -p "Подати kpi-thesis $(sed -n 's/^\\version{\(.*\)}/\1/p' build/ctan/kpi-thesis.pkg) на CTAN від {{email}}? [y/N] " a
+    [ "$a" = y ] || { echo "скасовано"; exit 1; }
+    cd build/ctan && PERL_LWP_SSL_CA_FILE="${PERL_LWP_SSL_CA_FILE:-/etc/ssl/cert.pem}" \
+      ctan-o-mat --submit kpi-thesis.pkg
 
 # Zip шаблону курсової для Overleaf (Upload Project): build/kpi-thesis-coursework-overleaf.zip
 overleaf:

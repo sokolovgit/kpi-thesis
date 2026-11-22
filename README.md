@@ -196,6 +196,7 @@ just check                          # перевірки нормоконтро�
 | `templates/coursework/` | курсова, один документ |
 | `scripts/check.py` | лінтер нормоконтролю (`tests/` — його тести) |
 | `docs/kpi-thesis-doc.tex`, `ctan/` | документація пакета й опис для CTAN (`just ctan`, `just ctan-validate <email>`) |
+| `docs/RELEASING.md`, `scripts/release_check.py` | як випускати реліз і оновлювати CTAN (`just release-check`, `just ctan-submit <email>`) |
 | `skills/kpi-thesis/` | скіл Claude Code: процес, правила, вимоги з номерами пунктів, граблі |
 | `.claude-plugin/` | маніфест плагіна й маркетплейсу |
 
