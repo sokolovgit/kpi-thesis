@@ -156,6 +156,11 @@ just check                          # перевірки нормоконтро�
 дипломною (поля 20 мм, без переносів, переліки «1)», підпис таблиці від краю, «Додаток А.
 Назва» одним рядком, псевдокод), — `\kpisetup{...}` у `main.tex`, приклад там уже є.
 
+Список джерел — у `sources.bib` поруч з документом: стиль `kpi-thesis-dstu` (biblatex + biber)
+оформлює описи за ДСТУ 8302:2015 і ставить їх у порядку першої згадки
+(`\kpisetup{sources=alphabetical}` або `chronological` — інший порядок). Робота з
+`thebibliography` збирається як і раніше.
+
 Шаблони мають налаштування для VS Code (LaTeX Workshop) і Zed: збірка з кнопки редактора
 йде тим самим `latexmk`, що й `just`, а chktex не засипає хибними попередженнями
 (`.chktexrc`).
@@ -196,6 +201,7 @@ just check                          # перевірки нормоконтро�
 | `tex/kpi-thesis.cls` | сторінка, шрифти, заголовки, підписи, додатки, список джерел, лістинги |
 | `tex/kpi-thesis-titles.sty` | `\kpiset{...}`, титул, завдання, анотації, відомість, титули документів |
 | `tex/kpi-thesis-graphics.sty` | аркуші А3 зі штампом ЄСКД |
+| `tex/kpi-thesis-dstu.{bbx,cbx}` | стиль biblatex за ДСТУ 8302:2015 |
 | `tex/kpi-thesis-{tables,where,lists,stats}.sty` | `kpitable`, `where`, переліки «а)», підрахунок для анотації; клас підключає їх сам |
 | `tex/kpi-titles.sty`, `tex/kpi-graphics.sty` | старі імена (до v2), лише підключають нові |
 | `templates/diploma/` | `meta.tex` + документи диплома: `title` (титул, завдання, анотації, відомість), `specification` (ТЗ), `explanatory-note` (ПЗ), `source-code` (текст програми), `test-plan` (ПМТ), `user-manual` (КК), `graphics` (графічний матеріал) |

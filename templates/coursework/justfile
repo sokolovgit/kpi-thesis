@@ -40,7 +40,7 @@ clean:
 
 # Прибрати лише проміжні файли (після збою чи двох збірок одночасно), PDF лишається
 clean-aux:
-    rm -f build/*.aux build/*.out build/*.toc build/*.fdb_latexmk build/*.fls build/*.xdv
+    rm -f build/*.aux build/*.out build/*.toc build/*.fdb_latexmk build/*.fls build/*.xdv build/*.bbl build/*.bcf build/*.blg build/*.run.xml
 
 # Заморозити клас для цієї роботи: копія в tex/, git pull у репозиторії класу її не змінює
 freeze:

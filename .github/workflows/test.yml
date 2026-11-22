@@ -24,7 +24,7 @@ jobs:
           echo "ttf-mscorefonts-installer msttcorefonts/accepted-mscorefonts-eula select true" | sudo debconf-set-selections
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            texlive-luatex texlive-latex-extra texlive-fonts-recommended texlive-plain-generic texlive-lang-cyrillic \
+            texlive-luatex texlive-latex-extra texlive-fonts-recommended texlive-plain-generic texlive-lang-cyrillic texlive-bibtex-extra biber \
             latexmk poppler-utils ttf-mscorefonts-installer fontconfig
           fc-cache -f
           fc-list | grep -q "Times New Roman" && fc-list | grep -q "Courier New"
@@ -41,7 +41,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            texlive-luatex texlive-latex-extra texlive-fonts-recommended texlive-plain-generic texlive-lang-cyrillic \
+            texlive-luatex texlive-latex-extra texlive-fonts-recommended texlive-plain-generic texlive-lang-cyrillic texlive-bibtex-extra biber \
             latexmk fonts-texgyre fontconfig
           ! fc-list | grep -q "Times New Roman"
       - uses: extractions/setup-just@v2
@@ -62,7 +62,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y --no-install-recommends \
-            texlive-luatex texlive-latex-extra texlive-fonts-recommended texlive-plain-generic texlive-lang-cyrillic \
+            texlive-luatex texlive-latex-extra texlive-fonts-recommended texlive-plain-generic texlive-lang-cyrillic texlive-bibtex-extra biber \
             latexmk fonts-texgyre fontconfig zip unzip
       - uses: extractions/setup-just@v2
       - name: Overleaf zip builds without the installed class
@@ -77,6 +77,7 @@ jobs:
           just ctan
           files=$(unzip -Z1 build/kpi-thesis.zip)
           for f in kpi-thesis/README.md kpi-thesis/LICENSE kpi-thesis/kpi-thesis.cls \
+                   kpi-thesis/kpi-thesis-dstu.bbx kpi-thesis/kpi-thesis-dstu.cbx \
                    kpi-thesis/doc/kpi-thesis-doc.pdf kpi-thesis/doc/kpi-thesis-doc.tex; do
             echo "$files" | grep -qx "$f" || { echo "missing $f"; exit 1; }
           done

@@ -2,6 +2,8 @@
 \documentclass{kpi-thesis}
 \usepackage{kpi-thesis-titles}
 \input{../meta.tex}
+% Джерела — у sources.bib; список за ДСТУ 8302 будує клас (\printbibliography нижче).
+\kpisetup{bibliography=biblatex, bib-resource=sources.bib}
 
 \begin{document}
 \kpiExplanatoryNoteTitle
@@ -16,7 +18,7 @@
 \input{chapters/04-testing}
 \input{chapters/05-deployment}
 \input{chapters/99-conclusions}
-\input{chapters/sources}
+\printbibliography
 
 \appendices
 % Звіт Unicheck — обов'язковий додаток (покладіть PDF у media/).

@@ -165,6 +165,91 @@ class CheckTest(unittest.TestCase):
         self.assertNotIn("дужки в дужках", out)
 
 
+class BiblatexTest(unittest.TestCase):
+    BIBFILE = "@book{a,\n  title = {Перше},\n}\n@online{b,\n  title = {Друге},\n}\n"
+
+    def files(self, body, preamble="\\kpisetup{bibliography=biblatex, bib-resource=sources.bib}\n"):
+        return {
+            "main.tex": "\\documentclass{kpi-thesis}\n" + preamble + "\\begin{document}\n"
+            + body + "\n\\printbibliography\n\\end{document}\n",
+            "sources.bib": self.BIBFILE,
+        }
+
+    def test_cited_keys_from_bib_are_fine(self):
+        code, out = run(self.files(r"Текст \parencite{b} і \textcite[с.~5]{a}."))
+        self.assertEqual(code, 0, out)
+
+    def test_missing_key_is_error(self):
+        code, out = run(self.files(r"Текст \autocite{nope}."))
+        self.assertEqual(code, 1)
+        self.assertIn("немає у файлі джерел", out)
+
+    def test_uncited_bib_entry_and_order_are_not_errors(self):
+        code, out = run(self.files(r"Лише \cite{b}."))
+        self.assertEqual(code, 0, out)
+
+    def test_addbibresource_is_read(self):
+        code, out = run(self.files(r"\cite{a}", "\\kpisetup{bibliography=biblatex}\n\\addbibresource{sources.bib}\n"))
+        self.assertEqual(code, 0, out)
+
+    def test_no_resource_is_error(self):
+        code, out = run(self.files(r"\cite{a}", "\\kpisetup{bibliography=biblatex}\n"))
+        self.assertEqual(code, 1)
+        self.assertIn("без файлу джерел", out)
+
+    def test_alphabetical_thebibliography(self):
+        bib = "\n\\begin{thebibliography}{9}\n\\bibitem{a} Шевченко Т. Кобзар.\n\\bibitem{b} Андрухович Ю. Рекреації.\n\\end{thebibliography}\n"
+        files = doc(r"\cite{a} \cite{b}" + bib)
+        files["main.tex"] = files["main.tex"].replace("}\n\\begin{document}", "}\n\\kpisetup{sources=alphabetical}\n\\begin{document}", 1)
+        code, out = run(files)
+        self.assertEqual(code, 1)
+        self.assertIn("не за алфавітом", out)
+
+    def test_cite_variants_and_multicite(self):
+        code, out = run(self.files(r"\Parencite[см.][с.~5]{a} і \cites[1]{b}{nope}."))
+        self.assertEqual(code, 1)
+        self.assertIn("\\cite{nope}", out)
+        self.assertNotIn("\\cite{b}", out)
+
+    def test_several_bib_resources(self):
+        files = self.files(r"\cite{a} \cite{c}", "\\kpisetup{bibliography=biblatex, bib-resource={sources.bib,more.bib}}\n")
+        files["more.bib"] = "@book(c,\n  title = {Третє},\n)\n"
+        code, out = run(files)
+        self.assertEqual(code, 0, out)
+
+    def test_bib_with_bom_and_todo(self):
+        files = self.files(r"\cite{a}")
+        files["sources.bib"] = "\ufeff@book{a,\n  title = {\\todo{Назва}},\n}\n"
+        code, out = run(files)
+        self.assertEqual(code, 1)
+        self.assertNotIn("немає у файлі джерел", out)
+        self.assertIn("sources.bib:2", out)
+        self.assertIn("заглушок \\todo", out)
+
+    def test_biber_warnings_from_blg(self):
+        files = self.files(r"\cite{a}")
+        files["build/main.log"] = "This is LuaHBTeX\n"
+        files["build/main.blg"] = (
+            "[116] Biber.pm:132> WARN - Duplicate entry key 'a' in file 'sources.bib', skipping ...\n"
+            "[120] Utils.pm:479> ERROR - BibTeX subsystem: sources.bib, line 3, syntax error\n"
+        )
+        code, out = run(files)
+        self.assertIn("попередження: biber: Duplicate entry key", out)
+        self.assertIn("помилка: biber: BibTeX subsystem", out)
+
+    def test_alphabetical_thebibliography_multiline_items(self):
+        bib = "\n\\begin{thebibliography}{9}\n\\bibitem{a}\nШевченко Т. Кобзар.\n\\bibitem{b}\nАндрухович Ю. Рекреації.\n\\end{thebibliography}\n"
+        files = doc(r"\cite{a} \cite{b}" + bib)
+        files["main.tex"] = files["main.tex"].replace("}\n\\begin{document}", "}\n\\kpisetup{sources=alphabetical}\n\\begin{document}", 1)
+        code, out = run(files)
+        self.assertIn("не за алфавітом", out)
+
+    def test_alphabetical_order_ok_and_cyrillic_before_latin(self):
+        self.assertLess(check.sort_key("Ґудзь"), check.sort_key("Дума"))
+        self.assertLess(check.sort_key("Їжак"), check.sort_key("Йорданія"))
+        self.assertLess(check.sort_key("Яковенко"), check.sort_key("Adams"))
+
+
 class PdfChecksTest(unittest.TestCase):
     """Checks that read the built PDF, fed with page texts instead of pdftotext."""
 

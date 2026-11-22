@@ -5,6 +5,21 @@
 
 ## v2.1.0 — не випущено
 
+Список джерел за ДСТУ 8302:2015 з `.bib` (#33):
+- Стиль biblatex `kpi-thesis-dstu`: книги (1–3 автори в заголовку, 4+ — з назви, «та ін.»), статті,
+  збірники й матеріали конференцій, дисертації, стандарти, закони, патенти, вебсторінки й
+  репозиторії; DOI, «URL: … (дата звернення: …)»; англомовні джерела — «Vol.», «no.», «P.»,
+  російськомовні — «изд.», «Вып.».
+  Посилання в тексті «[4]», «[4, с. 10]», «[1–3, 7]».
+- `\kpisetup{bibliography=biblatex, bib-resource=sources.bib}`, порядок —
+  `sources=citation|alphabetical|chronological`. Анотація рахує джерела, як і раніше.
+- Шаблони диплома й курсової — на `sources.bib` і `\printbibliography`.
+- `just check`: ключі `\cite`, `\parencite`, `\textcite`, `\autocite`, `\cites` звіряються з `.bib`,
+  попередження й помилки biber — з `.blg`, заглушки `\todo` шукаються і в `.bib`; для
+  `thebibliography` порядок перевіряється за ключем `sources`.
+- `just test` порівнює описи з еталонами (`tests/tex/bib/`): усі типи, алфавітний порядок і
+  крайні випадки (перекладні, багатотомні, газети, акти в «Офіційному віснику», російськомовні).
+
 Реліз (#29):
 - CI збирає zip для Overleaf окремо від встановленого класу й перевіряє вміст архіву для CTAN.
 - `just release-check` звіряє версії перед релізом, `just ctan-submit <email>` подає на CTAN;
@@ -14,6 +29,15 @@ Overleaf (#31):
 - Кнопка «Open in Overleaf» у README відкриває шаблон курсової з останнього релізу.
 - README і граблі: в Overleaf є Times New Roman і Courier New, тож шаблон там збирається тими
   шрифтами, що вимагає методичка, без завантаження `.ttf`.
+
+### Перехід з 2.0
+
+- Нічого не обов'язково: `thebibliography` працює як раніше.
+- Щоб перейти на `.bib`: описи — у `sources.bib` поруч з документом, у преамбулі
+  `\kpisetup{bibliography=biblatex, bib-resource=sources.bib}`, а замість
+  `\begin{thebibliography}...\end{thebibliography}` — `\printbibliography`. `\cite` лишаються.
+  До `clean-aux` у `justfile` роботи можна додати `.bbl .bcf .blg .run.xml` (як у шаблонах).
+- Linux: ще `biber` і `texlive-bibtex-extra`.
 
 ## v2.0.0 — 2026-11-17
 

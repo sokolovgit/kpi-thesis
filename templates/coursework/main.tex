@@ -4,6 +4,8 @@
 \usepackage{kpi-thesis-titles}
 % Оформлення за методичкою диплома. Якщо методичка курсової вимагає інше, увімкнути тут
 % (і записати поруч, на який пункт методички це спирається):
+% Джерела — у sources.bib; список за ДСТУ 8302 будує клас (\printbibliography нижче).
+\kpisetup{bibliography=biblatex, bib-resource=sources.bib}
 % \kpisetup{
 %   left-margin    = 20mm,    % поля 20 мм з усіх боків
 %   hyphenation    = false,   % без переносів
@@ -35,7 +37,7 @@
 \input{chapters/03-implementation}
 \input{chapters/04-testing}
 \input{chapters/99-conclusions}
-\input{chapters/sources}
+\printbibliography
 
 \appendices
 \appendix{Лістинг програми}

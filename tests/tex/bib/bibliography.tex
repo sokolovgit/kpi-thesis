@@ -1,0 +1,9 @@
+% just test: every entry type of the ДСТУ 8302 style on one line each, compared with expected-bibliography.txt.
+\documentclass{kpi-thesis}
+\kpisetup{bibliography=biblatex, bib-resource=sources.bib}
+\geometry{paperwidth=1200mm, left=20mm, right=20mm}
+\begin{document}
+\nocite{*}
+\cite{book1,book3,book4} \cite[с.~10--12]{art}
+\printbibliography
+\end{document}

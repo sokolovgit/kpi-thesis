@@ -71,24 +71,95 @@ def loc(row, root):
     return f"{path}:{n}"
 
 
-def check_bibliography(rows, root):
+CITE_RE = re.compile(
+    r"\\(?:nocite|(?:[Cc]ite|[Pp]arencite|[Tt]extcite|[Aa]utocite|[Ff]ootcite|[Ss]upercite|[Ff]ullcite)(s?)[pt]?)\*?"
+)
+CITE_ARG_RE = re.compile(r"\s*(?:\([^)]*\)|\[[^\]]*\])*\s*\{([^}]+)\}")
+
+
+def cited_keys(text):
+    """Keys of every citation command, including \\cites{a}{b} and \\parencite[см.][с. 5]{x}."""
+    for m in CITE_RE.finditer(text):
+        pos, groups = m.end(), 0
+        while True:
+            arg = CITE_ARG_RE.match(text, pos)
+            if not arg:
+                break
+            for key in arg.group(1).split(","):
+                yield key.strip()
+            pos, groups = arg.end(), groups + 1
+            if not m.group(1):
+                break
+UK_ALPHABET = "абвгґдеєжзиіїйклмнопрстуфхцчшщьюя"
+
+
+def sort_key(text):
+    """ДСТУ 8302 alphabetical order: Cyrillic by the Ukrainian alphabet first, then Latin."""
+    text = re.sub(r"\\[A-Za-z]+\*?|[{}~]", " ", text).strip().lower()
+    return [(0, UK_ALPHABET.index(c)) if c in UK_ALPHABET else (1, ord(c)) for c in text if c.isalnum()]
+
+
+def bib_entries(rows, doc):
+    """Keys of the .bib files the document loads (\\addbibresource, \\kpisetup{bib-resource=...})."""
+    names = []
+    for _, _, text in rows:
+        names += re.findall(r"\\addbibresource(?:\[[^\]]*\])?\{([^}]+)\}", text)
+        for value in re.findall(r"bib-resource\s*=\s*(\{[^}]*\}|[^,}\s]+)", text):
+            names += [n.strip() for n in value.strip("{}").split(",") if n.strip()]
+    keys = {}
+    for name in names:
+        bib = doc.parent / name
+        if not bib.exists():
+            continue
+        raw = bib.read_bytes()
+        try:
+            text = raw.decode("utf-8-sig")
+        except UnicodeDecodeError:
+            report(ERR, bib.name, "файл джерел не в UTF-8: збережіть його як UTF-8 (biber читатиме кракозябри)")
+            text = raw.decode("utf-8", errors="replace")
+        for n, line in enumerate(text.splitlines(), 1):
+            if re.search(r"\\todo\{", line):
+                todos.setdefault(bib, []).append(n)
+        for m in re.finditer(r"^\s*@(\w+)\s*[{(]\s*([^,\s]+)\s*,", text, re.M):
+            if m.group(1).lower() not in ("string", "comment", "preamble"):
+                keys[m.group(2)] = (bib, text[: m.start()].count("\n") + 1)
+    return names, keys
+
+
+def check_bibliography(rows, root, doc=None):
+    preamble = "".join(r[2] for r in rows)
+    biblatex = bool(re.search(r"bibliography\s*=\s*biblatex|\\usepackage(?:\[[^\]]*\])?\{biblatex\}", preamble))
+    order_rule = (re.search(r"sources\s*=\s*(alphabetical|chronological)", preamble) or [None, "citation"])[1]
     cites, bib = [], []
     in_bib = False
     for row in rows:
         text = row[2]
         if "\\begin{thebibliography}" in text:
             in_bib = True
-        for m in re.finditer(r"\\bibitem(?:\[[^\]]*\])?\{([^}]+)\}", text):
-            bib.append((m.group(1).strip(), row))
+        items = list(re.finditer(r"\\bibitem(?:\[[^\]]*\])?\{([^}]+)\}(.*)", text))
+        for m in items:
+            bib.append([m.group(1).strip(), row, m.group(2)])
+        if in_bib and not items and bib and "\\end{thebibliography}" not in text:
+            bib[-1][2] += " " + text.strip()
+        if "\\end{thebibliography}" in text:
+            in_bib = False
         if not in_bib:
-            for m in re.finditer(r"\\cite[pt]?\*?(?:\[[^\]]*\])?\{([^}]+)\}", text):
-                for key in m.group(1).split(","):
-                    key = key.strip()
-                    if key not in [c for c, _ in cites]:
-                        cites.append((key, row))
+            for key in cited_keys(text):
+                if key not in [c for c, _ in cites]:
+                    cites.append((key, row))
+    if biblatex and doc is not None:
+        names, keys = bib_entries(rows, doc)
+        if not names:
+            report(ERR, str(doc.relative_to(root)), "bibliography=biblatex без файлу джерел: додайте bib-resource=sources.bib")
+        elif not keys:
+            report(ERR, str(doc.relative_to(root)), f"не знайдено або порожній файл джерел: {', '.join(names)}")
+        for key, row in cites:
+            if key != "*" and keys and key not in keys:
+                report(ERR, loc(row, root), f"\\cite{{{key}}} немає у файлі джерел ({', '.join(names)})")
+        return
     if not bib:
         return
-    bib_keys = [k for k, _ in bib]
+    bib_keys = [k for k, _, _ in bib]
     cite_keys = [k for k, _ in cites]
     for key, row in cites:
         if key not in bib_keys:
@@ -97,19 +168,32 @@ def check_bibliography(rows, root):
                 loc(row, root),
                 f"\\cite{{{key}}} немає у списку джерел (\\bibitem)",
             )
-    for key, row in bib:
+    for key, row, _ in bib:
         if key not in cite_keys:
             report(
                 ERR,
                 loc(row, root),
                 f"на джерело «{key}» немає посилання в тексті (кожне джерело має бути процитоване)",
             )
+    if order_rule != "citation":
+        listed = [(k, row, rest) for k, row, rest in bib]
+        if order_rule == "alphabetical":
+            keyf = lambda e: sort_key(e[2])
+            what = "за алфавітом"
+        else:
+            keyf = lambda e: int((re.search(r"(?<![:\d])\b(1[89]\d\d|20\d\d)\b", e[2]) or [0, 9999])[1])
+            what = "за роком видання"
+        for (a, row, rest), (b, _, _) in zip(listed, sorted(listed, key=keyf)):
+            if a != b:
+                report(ERR, loc(row, root), f"джерела не {what} (\\kpisetup{{sources={order_rule}}}): на цьому місці мало б стояти «{b}»")
+                break
+        return
     order = [k for k in bib_keys if k in cite_keys]
     expected = [k for k in cite_keys if k in bib_keys]
     if order != expected:
         for i, (a, b) in enumerate(zip(order, expected)):
             if a != b:
-                row = dict(bib)[a]
+                row = next(r for k, r, _ in bib if k == a)
                 report(
                     ERR,
                     loc(row, root),
@@ -308,6 +392,12 @@ def check_log(doc, root):
         report(ERR, str(log.relative_to(root)), f"невизначене джерело «{key}»")
     for name in sorted(set(re.findall(r"File `([^']+)' not found", text))):
         report(ERR, str(log.relative_to(root)), f"не знайдено файл «{name}»")
+    blg = log.with_suffix(".blg")
+    if blg.exists():
+        for line in blg.read_text(encoding="utf-8", errors="replace").splitlines():
+            m = re.search(r"\]\s+\S+>\s+(WARN|ERROR) - (.+)", line)
+            if m:
+                report(ERR if m.group(1) == "ERROR" else WARN, str(blg.relative_to(root)), f"biber: {m.group(2).strip()}")
     if "Rerun to get" in text or "Label(s) may have changed" in text:
         report(
             WARN,
@@ -538,7 +628,7 @@ def main(argv):
     for doc in docs:
         rows = load(doc)
         is_note = doc.stem in ("explanatory-note", "main")
-        check_bibliography(rows, root)
+        check_bibliography(rows, root, doc)
         check_refs(rows, root)
         check_text(rows, root, is_note)
         check_log(doc, root)

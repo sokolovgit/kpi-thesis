@@ -79,6 +79,17 @@ test:
         || { echo "kpitable: немає «Продовження таблиці 1.1» на другій сторінці"; exit 1; }
       echo "kpitable: продовження на наступній сторінці є"
     fi
+    mkdir -p "$tmp/bib"
+    for t in bibliography alphabetical more; do
+      latexmk -lualatex -silent -cd -outdir="$tmp/bib" "{{ROOT}}/tests/tex/bib/$t.tex" >/dev/null 2>&1 \
+        || { grep -m5 -A3 '^!' "$tmp/bib/$t.log"; echo "bibliography ($t): збірка впала"; exit 1; }
+      if command -v pdftotext >/dev/null; then
+        pdftotext -layout "$tmp/bib/$t.pdf" - | sed 's/^ *//;s/  */ /g' | grep -E '^[0-9]+\) ' \
+          | diff "{{ROOT}}/tests/tex/bib/expected-$t.txt" - \
+          || { echo "bibliography ($t): список відрізняється від tests/tex/bib/expected-$t.txt"; exit 1; }
+      fi
+    done
+    echo "bibliography: описи ДСТУ 8302, алфавітний порядок і крайні випадки як в еталонах"
     echo "OK. PDF шаблонів: $tmp"
 
 # Архів для CTAN: build/kpi-thesis.zip (клас, пакети, документація, README, LICENSE)
@@ -89,7 +100,7 @@ ctan:
     mkdir -p build/ctan/kpi-thesis/doc build/doc
     TEXINPUTS="{{ROOT}}/tex//:" latexmk -lualatex -silent -outdir="{{ROOT}}/build/doc" docs/kpi-thesis-doc.tex >/dev/null \
       || { grep -m5 -A3 '^!' build/doc/kpi-thesis-doc.log; exit 1; }
-    cp tex/*.cls tex/*.sty build/ctan/kpi-thesis/
+    cp tex/*.cls tex/*.sty tex/*.bbx tex/*.cbx build/ctan/kpi-thesis/
     cp ctan/README.md LICENSE build/ctan/kpi-thesis/
     cp docs/kpi-thesis-doc.tex build/doc/kpi-thesis-doc.pdf build/ctan/kpi-thesis/doc/
     (cd build/ctan && zip -qrX ../kpi-thesis.zip kpi-thesis)
@@ -125,9 +136,9 @@ overleaf:
     #!/usr/bin/env bash
     set -euo pipefail
     d=build/overleaf; rm -rf "$d" build/kpi-thesis-coursework-overleaf.zip; mkdir -p "$d"
-    cp -R templates/coursework/main.tex templates/coursework/chapters "$d/"
+    cp -R templates/coursework/main.tex templates/coursework/sources.bib templates/coursework/chapters "$d/"
     mkdir -p "$d/media" && touch "$d/media/.keep"
-    cp tex/kpi-thesis.cls tex/kpi-thesis-*.sty "$d/"
+    cp tex/kpi-thesis.cls tex/kpi-thesis-*.sty tex/kpi-thesis-dstu.bbx tex/kpi-thesis-dstu.cbx "$d/"
     printf '%s\n' '$pdf_mode = 4;' > "$d/latexmkrc"
     (cd "$d" && zip -qrX ../kpi-thesis-coursework-overleaf.zip .)
     echo "-> build/kpi-thesis-coursework-overleaf.zip (Overleaf: New Project → Upload Project)"

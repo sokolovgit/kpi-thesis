@@ -1,0 +1,8 @@
+% just test: sources=alphabetical, compared with expected-alphabetical.txt.
+\documentclass{kpi-thesis}
+\kpisetup{bibliography=biblatex, bib-resource=sources.bib, sources=alphabetical}
+\geometry{paperwidth=1200mm, left=20mm, right=20mm}
+\begin{document}
+\nocite{*}
+\printbibliography
+\end{document}
