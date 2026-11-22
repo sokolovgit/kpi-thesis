@@ -24,9 +24,11 @@
   }
 \ExplSyntaxOff
 
-% The page of every footnote mark goes to .aux for `just check` (≤ 4 footnotes a page, Д 7.8).
+% The page of every footnote goes to .aux for `just check` (≤ 4 footnotes a page, Д 7.8).
 \def\kpi@footnote#1{}
-\AddToHook{cmd/footnote/before}{\protected@write\@auxout{}{\string\kpi@footnote{\the\c@page}}}
+% Hooked on \@footnotetext (\footnote and \footnotetext; a hook on \footnote loops in headings);
+% the page is expanded at shipout, when it is known.
+\AddToHook{cmd/@footnotetext/before}{\protected@write\@auxout{}{\string\kpi@footnote{\noexpand\the\noexpand\c@page}}}
 
 \newcount\kpi@shipped
 \AddToHook{shipout/after}{\global\advance\kpi@shipped\@ne}

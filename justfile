@@ -79,6 +79,12 @@ test:
         || { echo "kpitable: немає «Продовження таблиці 1.1» на другій сторінці"; exit 1; }
       echo "kpitable: продовження на наступній сторінці є"
     fi
+    mkdir -p "$tmp/fn"
+    perl -e 'alarm 300; exec @ARGV' latexmk -lualatex -silent -cd -outdir="$tmp/fn" "{{ROOT}}/tests/tex/footnotes.tex" >/dev/null 2>&1 \
+      || { echo "footnotes: збірка впала або зависла (виноска в заголовку)"; exit 1; }
+    [ "$(grep -cF 'kpi@footnote{1}' "$tmp/fn/footnotes.aux")" = 3 ] \
+      || { echo "footnotes: у .aux не 3 виноски на с. 1"; grep kpi@footnote "$tmp/fn/footnotes.aux"; exit 1; }
+    echo "footnotes: виноска в заголовку збирається, сторінки виносок у .aux"
     mkdir -p "$tmp/bib"
     for t in bibliography alphabetical more; do
       latexmk -lualatex -silent -cd -outdir="$tmp/bib" "{{ROOT}}/tests/tex/bib/$t.tex" >/dev/null 2>&1 \

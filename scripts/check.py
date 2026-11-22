@@ -622,25 +622,24 @@ def bib_records(text):
         fields, i, depth = {}, m.end(), 1
         start = i
         while i < len(text) and depth:
-            depth += {"{": 1, "(": 0, "}": -1}.get(text[i], 0)
+            depth += {"{": 1, "}": -1}.get(text[i], 0)
             i += 1
         body = text[start : i - 1]
-        for f in re.finditer(r"(\w+)\s*=\s*", body):
-            j, val = f.end(), ""
-            if j < len(body) and body[j] in "{\"":
-                close = "}" if body[j] == "{" else '"'
-                d, k = 0, j
-                while k < len(body):
-                    c = body[k]
-                    d += c == "{"
-                    d -= c == "}"
-                    if (close == "}" and d == 0) or (close == '"' and c == '"' and k > j and d == 0):
-                        break
-                    k += 1
-                val = body[j + 1 : k]
+        parts, depth, quote, cur = [], 0, False, ""
+        for c in body:
+            if c == '"' and depth == 0:
+                quote = not quote
+            depth += {"{": 1, "}": -1}.get(c, 0)
+            if c == "," and depth == 0 and not quote:
+                parts.append(cur)
+                cur = ""
             else:
-                val = re.match(r"[^,\s]*", body[j:]).group(0)
-            fields.setdefault(f.group(1).lower(), val)
+                cur += c
+        parts.append(cur)
+        for part in parts:
+            name, eq, val = part.partition("=")
+            if eq and re.fullmatch(r"\s*\w+\s*", name):
+                fields.setdefault(name.strip().lower(), val.strip().strip('{}"'))
         out.append((kind, m.group(2), fields, text[: m.start()].count("\n") + 1))
     return out
 
@@ -673,10 +672,10 @@ def check_sources(rows, root, doc):
         if re.search(r"\\url\{|https?://", entry):
             if "дата звернення" not in entry and "DOI" not in entry:
                 report(WARN, where, f"«{key}»: URL без «(дата звернення: ДД.ММ.РРРР)»")
-            if re.search(r"\\url\{", entry) and not re.search(r"(URL|DOI)\s*:\s*\\url\{", entry):
+            if re.search(r"\\url\{", entry) and not re.search(r"(URL|DOI)\s*:[\s~]*\\url\{", entry):
                 report(WARN, where, f"«{key}»: перед посиланням — «URL: »")
         plain = re.sub(r"\\url\{[^}]*\}|https?://\S+|дата звернення[^)]*", "", entry)
-        if not re.search(YEAR, plain) and not re.search(r"\\url\{|https?://", entry):
+        if not re.search(YEAR, plain) and not re.search(r"б\.\s*р\.", plain) and not re.search(r"\\url\{|https?://", entry):
             report(WARN, where, f"«{key}»: немає року видання")
     if doc is None:
         return
@@ -708,12 +707,19 @@ def balanced(text, start):
     return text[start : i - 1] if depth == 0 else None
 
 
+ABBR_END = r"(?:\bт\.\s?[дп]|\bін|\bст|\bрр?|\bс|\bім|\betc|\bal)\.\s*$"
+
+
 def check_headings(rows, root):
-    for row in rows:
+    for n, row in enumerate(rows):
         for m in re.finditer(HEADING_CMDS, row[2]):
-            title = balanced(row[2], m.end())
-            if title and re.search(r"(?<!\.)\.\s*$", title.strip()):
-                report(ERR, loc(row, root), f"заголовок «{title.strip()}» з крапкою в кінці (Д 7.1.20, М §6.2)")
+            title = balanced(" ".join([row[2]] + [r[2] for r in rows[n + 1 : n + 4]]), m.end())
+            if not title:
+                continue
+            title = re.sub(r"\s+", " ", title).strip()
+            if re.search(r"(?<!\.)\.$", title) and not re.search(ABBR_END, title):
+                clause = "Д 7.1.20, М §6.1" if m.group(0).startswith(("\\section", "\\structural", "\\chapter")) else "Д 7.1.21, М §6.2"
+                report(ERR, loc(row, root), f"заголовок «{title}» з крапкою в кінці ({clause})")
 
 
 def check_abbreviations(rows, root):
@@ -728,10 +734,13 @@ def check_abbreviations(rows, root):
         if active and re.search(r"\\end\{(?:longtable|tabular\*?|kpitable)\}|\\structural\{", text):
             break
         if active:
-            m = re.match(r"\s*([^&\\]+?)\s*&", text)
-            if m:
+            m = re.match(r"\s*(?:\\hline\s*)*([^&]+?)\s*&", text)
+            if m and not re.search(r"Скорочення|Позначення|Значення|Розшифрування|Термін", m.group(1)):
                 entries.append((m.group(1), row))
+
     def script(t):
+        if "$" in t or "\\" in t or len(re.sub(r"\W", "", t)) == 1:
+            return "other"
         c = next((c for c in t.lower() if c.isalpha()), "")
         return "cyr" if c in UK_ALPHABET else "lat" if c.isascii() and c.isalpha() else "other"
     run = []
@@ -754,6 +763,8 @@ def check_listings(rows, root, doc):
     start = None
     for row in rows:
         text = row[2]
+        if "\\appendices" in text:
+            break
         if re.search(r"\\begin\{(?:Verbatim|lstlisting|minted|verbatim)\}", text):
             start = row
             count = 0
@@ -783,11 +794,11 @@ def check_listings(rows, root, doc):
 
 def check_unresolved(doc, root):
     pages = pdf_pages_text(doc_pdf(doc))
-    if not pages or doc.stem == "title":
+    if not pages or doc.stem in ("title", "source-code"):
         return
-    bad = [i + 1 for i, p in enumerate(pages) if re.search(r"\?\?|\[\?\]", p)]
+    bad = [i + 1 for i, p in enumerate(pages) if re.search(r"(?:рисун\w*|таблиц\w*|формул\w*|розділ\w*|пункт\w*|додат\w*|лістинг\w*|алгоритм\w*|с\.|[(\[~])\s*\?\?|\[\?\]", p, re.I)]
     if bad:
-        report(ERR, str(doc_pdf(doc).relative_to(root)), f"«??» у PDF (нерозв'язане посилання), с. {', '.join(map(str, bad[:10]))}")
+        report(WARN, str(doc_pdf(doc).relative_to(root)), f"«??» у PDF, с. {', '.join(map(str, bad[:10]))}: нерозв'язане посилання (або «??» у тексті — тоді пропустіть)")
 
 
 def check_footnotes(doc, root):
@@ -799,7 +810,7 @@ def check_footnotes(doc, root):
     pages = re.findall(r"\\kpi@footnote\{([^}]*)\}", aux.read_text(encoding="utf-8", errors="replace"))
     for page in dict.fromkeys(pages):
         if pages.count(page) > 4:
-            report(WARN, str(aux.relative_to(root)), f"с. {page}: виносок {pages.count(page)}, не більше 4 на сторінці (Д 7.8)")
+            report(WARN, str(doc_pdf(doc).relative_to(root)), f"с. {page} PDF: виносок {pages.count(page)}, не більше 4 на сторінці (Д 7.8)")
 
 
 DIPLOMA_DOCS = ["title", "specification", "explanatory-note", "source-code", "test-plan", "user-manual", "graphics"]
@@ -828,8 +839,11 @@ def check_diploma(root):
     note = root / "explanatory-note" / "explanatory-note.tex"
     if note.exists():
         text = "".join(r[2] for r in load(note))
-        if not re.search(r"\\appendixpdf\{[^}]*\}|подібн|Unicheck", text, re.I):
+        m = re.search(r"\\appendixpdf\{[^}]*(?:подібност|Unicheck|плагіат)[^}]*\}\{([^}]+)\}", text, re.I)
+        if not m and not re.search(r"\\appendix\{[^}]*(?:подібност|Unicheck|плагіат)", text, re.I):
             report(WARN, str(note.relative_to(root)), "немає додатка зі звітом подібності (Unicheck) — \\appendixpdf{Звіт подібності}{...}")
+        elif m and not (note.parent / m.group(1)).exists():
+            report(WARN, str(note.relative_to(root)), f"звіт подібності: немає файлу {m.group(1)}")
     rows = load(meta)
     text = "\n".join(r[2] for r in rows)
     m = re.search(r"^\s*program\s*=\s*\{([^}]*)\}", text, re.M)
@@ -842,7 +856,7 @@ def check_diploma(root):
             blank.append((km.group(1), row))
     if blank:
         report(WARN, loc(blank[0][1], root), f"не заповнено {', '.join(k for k, _ in blank)} — прізвища в штампах і підписах перевіряє нормоконтроль")
-    cal = re.search(r"\\kpiCalendarRows\s*\{(.*?)\n\s*\}", text, re.S)
+    cal = re.search(r"\\kpiCalendarRows\}?\s*\{(.*?)\n\s*\}", text, re.S)
     if cal:
         empty = [r for r in re.split(r"\\\\", cal.group(1)) if "&" in r and not any(c.strip() for c in r.split("&")[2:])]
         if empty:
@@ -876,6 +890,7 @@ def main(argv):
         check_headings(rows, root)
         if is_note:
             check_abbreviations(rows, root)
+        if doc.stem == "explanatory-note":
             check_listings(rows, root, doc)
         check_unresolved(doc, root)
         check_footnotes(doc, root)

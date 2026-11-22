@@ -358,27 +358,69 @@ class MoreChecksTest(unittest.TestCase):
 
     def test_long_listing_in_note(self):
         code_lines = "\n".join(f"x = {i}" for i in range(90))
-        code, out = run(doc("\\begin{Verbatim}\n" + code_lines + "\n\\end{Verbatim}\n\\begin{Verbatim}\nshort\n\\end{Verbatim}"))
+        long = "\\begin{Verbatim}\n" + code_lines + "\n\\end{Verbatim}\n"
+        body = long + "\\begin{Verbatim}\nshort\n\\end{Verbatim}\n\\appendices\n" + long
+        files = {"explanatory-note/explanatory-note.tex": doc(body)["main.tex"]}
+        code, out = run(files)
         self.assertEqual(out.count("довший за сторінку"), 1)
         self.assertIn("на 90 рядків", out)
+
+    def test_coursework_listing_is_fine(self):
+        code_lines = "\n".join(f"x = {i}" for i in range(90))
+        code, out = run(doc("\\begin{Verbatim}\n" + code_lines + "\n\\end{Verbatim}"))
+        self.assertNotIn("довший за сторінку", out)
+
+    def test_heading_edge_cases(self):
+        code, out = run(doc("\\section{Методи, алгоритми і т. д.}\n\\subsection{Довгий заголовок,\n що переходить на рядок.}"))
+        self.assertNotIn("т. д.» з крапкою", out)
+        self.assertIn("що переходить на рядок.» з крапкою в кінці (Д 7.1.21, М §6.2)", out)
+
+    def test_sources_edge_cases(self):
+        bib = (
+            "\n\\begin{thebibliography}{9}\n"
+            "\\bibitem{a} Документація. URL:~\\url{https://b.ua} (дата звернення: 01.11.2026).\n"
+            "\\bibitem{b} Іванов І. Книга. Київ, б. р. 100 с.\n"
+            "\\end{thebibliography}\n"
+        )
+        code, out = run(doc(r"\cite{a} \cite{b}" + bib))
+        self.assertNotIn("«a»", out)
+        self.assertNotIn("«b»", out)
+
+    def test_bib_fields_only_top_level(self):
+        files = {
+            "main.tex": "\\documentclass{kpi-thesis}\n\\kpisetup{bibliography=biblatex, bib-resource=sources.bib}\n"
+            "\\begin{document}\n\\cite{a}\n\\printbibliography\n\\end{document}\n",
+            "sources.bib": "@online{a, title={Сайт}, url={https://a.ua/?doi=10.1/a&urldate=2020}}\n",
+        }
+        code, out = run(files)
+        self.assertIn("«a»: url без urldate", out)
+
+    def test_abbreviations_header_and_symbols(self):
+        body = (
+            "\\structural{ПЕРЕЛІК УМОВНИХ ПОЗНАЧЕНЬ}\n\\begin{longtable}{ll}\n"
+            "Скорочення & Значення \\\\\nБД & -- & база даних.\\\\\nSQL & -- & мова.\\\\\n"
+            "a & -- & прискорення.\\\\\n$\\alpha$ & -- & кут.\\\\\n\\end{longtable}\n"
+        )
+        code, out = run(doc(body))
+        self.assertNotIn("перелік скорочень", out)
 
     def test_footnotes_per_page(self):
         files = doc("Текст.")
         files["build/main.aux"] = "\\relax\n" + "\\kpi@footnote{3}\n" * 5 + "\\kpi@footnote{4}\n" * 4
         code, out = run(files)
-        self.assertIn("с. 3: виносок 5", out)
+        self.assertIn("с. 3 PDF: виносок 5", out)
         self.assertNotIn("с. 4:", out)
 
     def test_diploma_composition_and_meta(self):
         meta = (
             "\\kpiset{\n  program = {Комп'ютерні науки},\n  student-stamp = {Прізвище І.П.},\n"
-            "  advisor-stamp = {Петренко П.П.},\n}\n\\renewcommand\\kpiCalendarRows{%\n"
+            "  advisor-stamp = {Петренко П.П.},\n}\n\\renewcommand{\\kpiCalendarRows}{%\n"
             "  1 & Вивчення & березень & \\\\ \\hline\n  2 & Розробка & & \\\\ \\hline\n}\n"
         )
         graphics = "\\documentclass{kpi-thesis}\n\\begin{document}\n\\graphicsSheet{ССВ}{a}{b}\n\\diagramPage{ПЛК}{c}{d.png}\n\\end{document}\n"
         files = {"meta.tex": meta, "graphics/graphics.tex": graphics}
         for name in ("title", "explanatory-note"):
-            files[f"{name}/{name}.tex"] = "\\documentclass{kpi-thesis}\n\\input{../meta.tex}\n\\begin{document}\nТекст.\n\\end{document}\n"
+            files[f"{name}/{name}.tex"] = "\\documentclass{kpi-thesis}\n\\input{../meta.tex}\n\\begin{document}\nОгляд подібних систем.\n\\end{document}\n"
         code, out = run(files)
         self.assertIn("немає документа specification/specification.tex", out)
         self.assertNotIn("немає документа title/", out)
@@ -393,5 +435,9 @@ class MoreChecksTest(unittest.TestCase):
 
 class UnresolvedPdfTest(PdfChecksTest):
     def test_question_marks_in_pdf(self):
-        code, out = self.run_pdf(["Вступ", "на рисунку ?? видно", "Кінець"], "\\documentclass{kpi-thesis}\n\\begin{document}\nx\n\\end{document}\n")
-        self.assertIn("«??» у PDF (нерозв'язане посилання), с. 2", out)
+        code, out = self.run_pdf(["Вступ", "на рисунку ?? видно", "Кінець (таблиця ??)"], "\\documentclass{kpi-thesis}\n\\begin{document}\nx\n\\end{document}\n")
+        self.assertIn("«??» у PDF, с. 2, 3:", out)
+
+    def test_null_coalescing_is_not_unresolved(self):
+        code, out = self.run_pdf(["const x = y ?? 0; z ??= 1"], "\\documentclass{kpi-thesis}\n\\begin{document}\nx\n\\end{document}\n")
+        self.assertNotIn("«??»", out)
