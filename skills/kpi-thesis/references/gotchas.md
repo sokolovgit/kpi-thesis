@@ -2,7 +2,7 @@
 
 - **LuaLaTeX, `.latexmkrc` з `$pdf_mode = 4`.** Робота з `xelatex` у `.latexmkrc` (до v2) теж
   збирається, з попередженням класу. Через `.xdv` (`$pdf_mode = 5`) не збирати: ламає аркуші А3.
-- **Немає Times New Roman / Courier New** (Overleaf, Linux без mscorefonts) — клас бере TeX Gyre
+- **Немає Times New Roman / Courier New** (Linux без mscorefonts; в Overleaf вони є) — клас бере TeX Gyre
   Termes / Cursor і пише попередження. Для здачі потрібен саме Times New Roman.
 - **`_` у тексті = математика.** Заглушки на кшталт `«__» ____` у `meta.tex` дають
   «Missing $ inserted». Для порожніх місць — `\todo{...}` або `\sigline{2cm}`.
