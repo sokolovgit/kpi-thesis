@@ -75,7 +75,8 @@
 \justifying
 
 % --- Packages used across documents ---
-\RequirePackage{ulem}
+% normalem: \emph stays italic; ulem is here only for \uline on the title forms.
+\RequirePackage[normalem]{ulem}
 \setlength{\ULdepth}{2pt}
 \RequirePackage{makecell}
 \RequirePackage{multirow}
@@ -87,7 +88,8 @@
 \RequirePackage{listings}
 \RequirePackage{fvextra}
 \RequirePackage{xcolor}
-\RequirePackage{cite}
+% cite only for the hand-written thebibliography; \kpisetup{bibliography=biblatex} replaces it.
+\AddToHook{begindocument/before}{\@ifpackageloaded{biblatex}{}{\RequirePackage{cite}}}
 % URLs break after / . - _ and the like, never mid-word; \kpisetup{url-breaks=anywhere} for xurl.
 \RequirePackage[hyphens]{url}
 \urlstyle{same}
@@ -285,6 +287,9 @@
 %   appendix-title = inline   % «Додаток А. Назва» on one line; default two lines
 %   url-breaks     = anywhere % xurl: a URL may break at any character; default after / . - _
 %   algorithms                % algorithm + algpseudocode, «Алгоритм 1.1 – Назва» like tables
+%   bibliography   = biblatex % sources from a .bib file, ДСТУ 8302 style; default thebibliography
+%   bib-resource   = sources.bib  % the .bib file(s) for biblatex (or \addbibresource)
+%   sources        = alphabetical % list order: citation (default), alphabetical, chronological
 \newif\ifkpi@appinline
 \def\kpi@nohyphenation{%
   \hyphenpenalty=10000 \exhyphenpenalty=10000
@@ -302,8 +307,39 @@
   \numberwithin{algorithm}{section}%
   \captionsetup*[algorithm]{labelsep=kpidash, justification=raggedright, singlelinecheck=false}}
 \ExplSyntaxOn
+\bool_new:N \l__kpi_biblatex_bool
+\clist_new:N \l__kpi_bibresources_clist
+\tl_new:N \l__kpi_sorting_tl
+\tl_set:Nn \l__kpi_sorting_tl { none }
+% biblatex is loaded once the \kpisetup call that asks for it is done, so the order of the keys
+% inside it doesn't matter.
+\cs_new_protected:Npn \__kpi_load_biblatex:
+  {
+    \bool_if:NT \l__kpi_biblatex_bool
+      {
+        \@ifpackageloaded { biblatex } { }
+          {
+            \use:e
+              {
+                \exp_not:N \RequirePackage
+                  [ backend = biber , style = kpi-thesis-dstu , sorting = \l__kpi_sorting_tl ]
+                  { biblatex }
+              }
+            \DefineBibliographyStrings { ukrainian } { references = { СПИСОК~ВИКОРИСТАНИХ~ДЖЕРЕЛ } }
+            \defbibheading { bibliography } [ \refname ] { \structural { ##1 } }
+            \AtEveryBibitem { \stepcounter { kpi@sources } }
+          }
+        \clist_map_inline:Nn \l__kpi_bibresources_clist { \addbibresource { ##1 } }
+        \clist_clear:N \l__kpi_bibresources_clist
+      }
+  }
 \keys_define:nn { kpi / setup }
   {
+    bibliography   .choices:nn = { thebibliography, biblatex }
+      { \bool_set:Nn \l__kpi_biblatex_bool { \int_compare_p:nNn { \l_keys_choice_int } = { 2 } } },
+    bib-resource   .code:n = { \clist_put_right:Nn \l__kpi_bibresources_clist {#1} },
+    sources        .choices:nn = { citation, alphabetical, chronological }
+      { \tl_set:Ne \l__kpi_sorting_tl { \clist_item:nn { none, nty, ynt } { \l_keys_choice_int } } },
     left-margin    .code:n = { \geometry { left = #1 } },
     hyphenation    .choices:nn = { true, false }
       { \int_compare:nNnT { \l_keys_choice_int } = { 2 } { \kpi@nohyphenation } },
@@ -318,7 +354,7 @@
     algorithms     .code:n = { \kpi@algorithms },
     algorithms     .value_forbidden:n = true,
   }
-\NewDocumentCommand \kpisetup { m } { \keys_set:nn { kpi / setup } { #1 } }
+\NewDocumentCommand \kpisetup { m } { \keys_set:nn { kpi / setup } { #1 } \__kpi_load_biblatex: }
 \ExplSyntaxOff
 \@onlypreamble\kpisetup
 

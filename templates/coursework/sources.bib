@@ -1,0 +1,58 @@
+% Джерела курсової. Опис за ДСТУ 8302:2015 будує стиль класу: тут лише дані.
+% До списку потрапляють лише ті, на які є \cite у тексті, у порядку першої згадки.
+% Англомовні джерела — з langid = {english} (Vol., no., P., et al.).
+
+@book{example,
+  author    = {\todo{Прізвище, Ім'я По батькові}},
+  title     = {\todo{Назва}},
+  location  = {\todo{Місто}},
+  publisher = {\todo{Видавництво}},
+  date      = {2025},
+  pagetotal = {100},
+}
+
+% Зразки інших типів (на них ще немає \cite, тож у списку їх не буде):
+@book{example-book,
+  author     = {Прізвище, Ім'я По батькові},
+  title      = {Назва книги},
+  titleaddon = {навч. посіб.},
+  location   = {Київ},
+  publisher  = {КПІ ім. Ігоря Сікорського},
+  date       = {2024},
+  pagetotal  = {320},
+}
+@article{example-article,
+  author       = {Прізвище, І. П. and Прізвище, І. П.},
+  title        = {Назва статті},
+  journaltitle = {Наукові вісті КПІ},
+  date         = {2024},
+  volume       = {5},
+  number       = {2},
+  pages        = {10--20},
+  doi          = {10.20535/kpisn.2024.2.000000},
+}
+@article{example-article-en,
+  langid       = {english},
+  author       = {Smith, John and Doe, Jane},
+  title        = {Title of the article},
+  journaltitle = {Journal of Software Engineering},
+  date         = {2024},
+  volume       = {12},
+  number       = {3},
+  pages        = {45--60},
+}
+@standard{example-standard,
+  number    = {ДСТУ ISO/IEC 25010:2016},
+  title     = {Програмна інженерія. Вимоги та оцінювання якості систем і програмного забезпечення (SQuaRE). Моделі якості системи та програмного забезпечення},
+  location  = {Київ},
+  publisher = {ДП «УкрНДНЦ»},
+  date      = {2018},
+  pagetotal = {30},
+}
+@software{example-repo,
+  title      = {Назва проєкту},
+  titleaddon = {репозиторій},
+  organization = {GitHub},
+  url        = {https://github.com/owner/repo},
+  urldate    = {2026-11-01},
+}

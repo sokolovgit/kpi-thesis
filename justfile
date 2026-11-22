@@ -79,6 +79,21 @@ test:
         || { echo "kpitable: немає «Продовження таблиці 1.1» на другій сторінці"; exit 1; }
       echo "kpitable: продовження на наступній сторінці є"
     fi
+    mkdir -p "$tmp/bib"
+    latexmk -lualatex -silent -cd -outdir="$tmp/bib" "{{ROOT}}/tests/tex/bib/bibliography.tex" >/dev/null 2>&1 \
+      || { grep -m5 -A3 '^!' "$tmp/bib/bibliography.log"; echo "bibliography: збірка впала"; exit 1; }
+    if command -v pdftotext >/dev/null; then
+      pdftotext -layout "$tmp/bib/bibliography.pdf" - | sed 's/^ *//;s/  */ /g' | grep -E '^[0-9]+\) ' \
+        | diff "{{ROOT}}/tests/tex/bib/expected.txt" - \
+        || { echo "bibliography: список джерел відрізняється від tests/tex/bib/expected.txt"; exit 1; }
+      echo "bibliography: усі описи ДСТУ 8302 як в еталоні"
+      latexmk -lualatex -silent -cd -outdir="$tmp/bib" "{{ROOT}}/tests/tex/bib/alphabetical.tex" >/dev/null 2>&1 \
+        || { grep -m5 -A3 '^!' "$tmp/bib/alphabetical.log"; echo "bibliography: alphabetical збірка впала"; exit 1; }
+      pdftotext -layout "$tmp/bib/alphabetical.pdf" - | sed 's/^ *//;s/  */ /g' | grep -E '^[0-9]+\) ' \
+        | diff "{{ROOT}}/tests/tex/bib/expected-alphabetical.txt" - \
+        || { echo "bibliography: алфавітний порядок відрізняється від tests/tex/bib/expected-alphabetical.txt"; exit 1; }
+      echo "bibliography: sources=alphabetical — кирилиця за абеткою, далі латиниця"
+    fi
     echo "OK. PDF шаблонів: $tmp"
 
 # Архів для CTAN: build/kpi-thesis.zip (клас, пакети, документація, README, LICENSE)
@@ -89,7 +104,7 @@ ctan:
     mkdir -p build/ctan/kpi-thesis/doc build/doc
     TEXINPUTS="{{ROOT}}/tex//:" latexmk -lualatex -silent -outdir="{{ROOT}}/build/doc" docs/kpi-thesis-doc.tex >/dev/null \
       || { grep -m5 -A3 '^!' build/doc/kpi-thesis-doc.log; exit 1; }
-    cp tex/*.cls tex/*.sty build/ctan/kpi-thesis/
+    cp tex/*.cls tex/*.sty tex/*.bbx tex/*.cbx build/ctan/kpi-thesis/
     cp ctan/README.md LICENSE build/ctan/kpi-thesis/
     cp docs/kpi-thesis-doc.tex build/doc/kpi-thesis-doc.pdf build/ctan/kpi-thesis/doc/
     (cd build/ctan && zip -qrX ../kpi-thesis.zip kpi-thesis)
@@ -125,9 +140,9 @@ overleaf:
     #!/usr/bin/env bash
     set -euo pipefail
     d=build/overleaf; rm -rf "$d" build/kpi-thesis-coursework-overleaf.zip; mkdir -p "$d"
-    cp -R templates/coursework/main.tex templates/coursework/chapters "$d/"
+    cp -R templates/coursework/main.tex templates/coursework/sources.bib templates/coursework/chapters "$d/"
     mkdir -p "$d/media" && touch "$d/media/.keep"
-    cp tex/kpi-thesis.cls tex/kpi-thesis-*.sty "$d/"
+    cp tex/kpi-thesis.cls tex/kpi-thesis-*.sty tex/kpi-thesis-dstu.bbx tex/kpi-thesis-dstu.cbx "$d/"
     printf '%s\n' '$pdf_mode = 4;' > "$d/latexmkrc"
     (cd "$d" && zip -qrX ../kpi-thesis-coursework-overleaf.zip .)
     echo "-> build/kpi-thesis-coursework-overleaf.zip (Overleaf: New Project → Upload Project)"

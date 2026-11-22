@@ -48,6 +48,13 @@
 - **chktex у texlab** запускається в теці самого файлу, тож `.chktexrc` з кореня роботи для
   `chapters/*.tex` не видно. Шаблони передають ті самі `-n` через `chktex.additionalArgs`
   (Zed) і `linting.chktex.exec.args` (VS Code); `.chktexrc` — для chktex з терміналу.
+- **biblatex: «Citation 'x' undefined» після першої збірки.** latexmk запускає biber сам
+  (бачить `.bcf`); якщо ні — нема `biber` (Linux: `apt install biber texlive-bibtex-extra`).
+  Помилки розбору `.bib` — у `build/*.blg`, `just check` показує їх як «biber: …».
+- **biblatex і пакет `cite` несумісні.** Клас вантажить `cite` лише без biblatex; власний
+  `\usepackage{cite}` у преамбулі роботи на biblatex — прибрати.
+- **`\uline` / `ulem`.** Клас вантажить `ulem` з `normalem`: `\emph` лишається курсивом (без
+  цього biblatex підкреслював би назви журналів).
 - **Zed / texlab.** texlab не пов'язує `\cite` з `\bibitem` в іншому файлі (кожне джерело в
   розділі — «Undefined reference») і завжди вважає `\bibitem` невикористаними. Шаблони несуть
   `.zed/settings.json`, що ховає ці два повідомлення; биті посилання ловить `just check`.

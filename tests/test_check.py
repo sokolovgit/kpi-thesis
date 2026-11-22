@@ -165,6 +165,52 @@ class CheckTest(unittest.TestCase):
         self.assertNotIn("дужки в дужках", out)
 
 
+class BiblatexTest(unittest.TestCase):
+    BIBFILE = "@book{a,\n  title = {Перше},\n}\n@online{b,\n  title = {Друге},\n}\n"
+
+    def files(self, body, preamble="\\kpisetup{bibliography=biblatex, bib-resource=sources.bib}\n"):
+        return {
+            "main.tex": "\\documentclass{kpi-thesis}\n" + preamble + "\\begin{document}\n"
+            + body + "\n\\printbibliography\n\\end{document}\n",
+            "sources.bib": self.BIBFILE,
+        }
+
+    def test_cited_keys_from_bib_are_fine(self):
+        code, out = run(self.files(r"Текст \parencite{b} і \textcite[с.~5]{a}."))
+        self.assertEqual(code, 0, out)
+
+    def test_missing_key_is_error(self):
+        code, out = run(self.files(r"Текст \autocite{nope}."))
+        self.assertEqual(code, 1)
+        self.assertIn("немає у файлі джерел", out)
+
+    def test_uncited_bib_entry_and_order_are_not_errors(self):
+        code, out = run(self.files(r"Лише \cite{b}."))
+        self.assertEqual(code, 0, out)
+
+    def test_addbibresource_is_read(self):
+        code, out = run(self.files(r"\cite{a}", "\\kpisetup{bibliography=biblatex}\n\\addbibresource{sources.bib}\n"))
+        self.assertEqual(code, 0, out)
+
+    def test_no_resource_is_error(self):
+        code, out = run(self.files(r"\cite{a}", "\\kpisetup{bibliography=biblatex}\n"))
+        self.assertEqual(code, 1)
+        self.assertIn("без файлу джерел", out)
+
+    def test_alphabetical_thebibliography(self):
+        bib = "\n\\begin{thebibliography}{9}\n\\bibitem{a} Шевченко Т. Кобзар.\n\\bibitem{b} Андрухович Ю. Рекреації.\n\\end{thebibliography}\n"
+        files = doc(r"\cite{a} \cite{b}" + bib)
+        files["main.tex"] = files["main.tex"].replace("}\n\\begin{document}", "}\n\\kpisetup{sources=alphabetical}\n\\begin{document}", 1)
+        code, out = run(files)
+        self.assertEqual(code, 1)
+        self.assertIn("не за алфавітом", out)
+
+    def test_alphabetical_order_ok_and_cyrillic_before_latin(self):
+        self.assertLess(check.sort_key("Ґудзь"), check.sort_key("Дума"))
+        self.assertLess(check.sort_key("Їжак"), check.sort_key("Йорданія"))
+        self.assertLess(check.sort_key("Яковенко"), check.sort_key("Adams"))
+
+
 class PdfChecksTest(unittest.TestCase):
     """Checks that read the built PDF, fed with page texts instead of pdftotext."""
 
