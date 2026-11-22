@@ -309,3 +309,89 @@ class PdfChecksTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class MoreChecksTest(unittest.TestCase):
+    def test_heading_with_period(self):
+        code, out = run(doc(r"\section{Аналіз предметної області.}" "\n" r"\subsection{Огляд}"))
+        self.assertEqual(code, 1)
+        self.assertIn("«Аналіз предметної області.» з крапкою", out)
+        self.assertNotIn("«Огляд»", out)
+
+    def test_written_sources(self):
+        bib = (
+            "\n\\begin{thebibliography}{9}\n"
+            "\\bibitem{a} Сайт [Електронний ресурс]. Режим доступу: \\url{https://a.ua}\n"
+            "\\bibitem{b} Документація. URL: \\url{https://b.ua} (дата звернення: 01.11.2026).\n"
+            "\\bibitem{c} Іванов І. Книга. Київ : Наука.\n"
+            "\\end{thebibliography}\n"
+        )
+        code, out = run(doc(r"\cite{a} \cite{b} \cite{c}" + bib))
+        self.assertIn("«a»: «[Електронний ресурс]»", out)
+        self.assertIn("«a»: URL без «(дата звернення", out)
+        self.assertIn("«a»: перед посиланням — «URL: »", out)
+        self.assertNotIn("«b»", out)
+        self.assertIn("«c»: немає року видання", out)
+
+    def test_bib_fields(self):
+        files = {
+            "main.tex": "\\documentclass{kpi-thesis}\n\\kpisetup{bibliography=biblatex, bib-resource=sources.bib}\n"
+            "\\begin{document}\n\\cite{a,b,c}\n\\printbibliography\n\\end{document}\n",
+            "sources.bib": "@online{a, title={Сайт}, url={https://a.ua}}\n"
+            "@online{b, title={Сайт}, url={https://b.ua}, urldate={2026-11-01}}\n"
+            "@book{c, title = {Книга {з дужками}}, location={Київ}}\n",
+        }
+        code, out = run(files)
+        self.assertIn("«a»: url без urldate", out)
+        self.assertNotIn("«b»", out)
+        self.assertIn("sources.bib:3: попередження: «c»: немає date", out)
+
+    def test_abbreviations_order(self):
+        body = (
+            "\\structural{ПЕРЕЛІК УМОВНИХ ПОЗНАЧЕНЬ}\n\\begin{longtable}{ll}\n"
+            "API & -- & інтерфейс.\\\\\nREST & -- & стиль.\\\\\n"
+            "СУБД & -- & система.\\\\\nБД & -- & база даних.\\\\\n\\end{longtable}\n"
+        )
+        code, out = run(doc(body))
+        self.assertIn("«БД» має стояти перед «СУБД»", out)
+        self.assertNotIn("«REST»", out)
+
+    def test_long_listing_in_note(self):
+        code_lines = "\n".join(f"x = {i}" for i in range(90))
+        code, out = run(doc("\\begin{Verbatim}\n" + code_lines + "\n\\end{Verbatim}\n\\begin{Verbatim}\nshort\n\\end{Verbatim}"))
+        self.assertEqual(out.count("довший за сторінку"), 1)
+        self.assertIn("на 90 рядків", out)
+
+    def test_footnotes_per_page(self):
+        files = doc("Текст.")
+        files["build/main.aux"] = "\\relax\n" + "\\kpi@footnote{3}\n" * 5 + "\\kpi@footnote{4}\n" * 4
+        code, out = run(files)
+        self.assertIn("с. 3: виносок 5", out)
+        self.assertNotIn("с. 4:", out)
+
+    def test_diploma_composition_and_meta(self):
+        meta = (
+            "\\kpiset{\n  program = {Комп'ютерні науки},\n  student-stamp = {Прізвище І.П.},\n"
+            "  advisor-stamp = {Петренко П.П.},\n}\n\\renewcommand\\kpiCalendarRows{%\n"
+            "  1 & Вивчення & березень & \\\\ \\hline\n  2 & Розробка & & \\\\ \\hline\n}\n"
+        )
+        graphics = "\\documentclass{kpi-thesis}\n\\begin{document}\n\\graphicsSheet{ССВ}{a}{b}\n\\diagramPage{ПЛК}{c}{d.png}\n\\end{document}\n"
+        files = {"meta.tex": meta, "graphics/graphics.tex": graphics}
+        for name in ("title", "explanatory-note"):
+            files[f"{name}/{name}.tex"] = "\\documentclass{kpi-thesis}\n\\input{../meta.tex}\n\\begin{document}\nТекст.\n\\end{document}\n"
+        code, out = run(files)
+        self.assertIn("немає документа specification/specification.tex", out)
+        self.assertNotIn("немає документа title/", out)
+        self.assertIn("аркушів графічного матеріалу 2", out)
+        self.assertIn("код схеми «ПЛК»", out)
+        self.assertNotIn("«ССВ»", out)
+        self.assertIn("звітом подібності", out)
+        self.assertIn("освітня програма «Комп'ютерні науки»", out)
+        self.assertIn("не заповнено student-stamp —", out)
+        self.assertIn("без термінів 1 рядк.", out)
+
+
+class UnresolvedPdfTest(PdfChecksTest):
+    def test_question_marks_in_pdf(self):
+        code, out = self.run_pdf(["Вступ", "на рисунку ?? видно", "Кінець"], "\\documentclass{kpi-thesis}\n\\begin{document}\nx\n\\end{document}\n")
+        self.assertIn("«??» у PDF (нерозв'язане посилання), с. 2", out)
