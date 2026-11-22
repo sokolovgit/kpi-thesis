@@ -87,7 +87,7 @@ ctan:
     set -euo pipefail
     rm -rf build/ctan build/kpi-thesis.zip
     mkdir -p build/ctan/kpi-thesis/doc build/doc
-    latexmk -lualatex -silent -outdir="{{ROOT}}/build/doc" docs/kpi-thesis-doc.tex >/dev/null \
+    TEXINPUTS="{{ROOT}}/tex//:" latexmk -lualatex -silent -outdir="{{ROOT}}/build/doc" docs/kpi-thesis-doc.tex >/dev/null \
       || { grep -m5 -A3 '^!' build/doc/kpi-thesis-doc.log; exit 1; }
     cp tex/*.cls tex/*.sty build/ctan/kpi-thesis/
     cp ctan/README.md LICENSE build/ctan/kpi-thesis/
