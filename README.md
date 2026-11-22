@@ -85,6 +85,14 @@ just install        # клас стає видимим для TeX (TEXMFHOME)
 just test           # необов'язково: збирає обидва шаблони, має закінчитися рядком OK
 ```
 
+### Лише клас: TeX Live, MiKTeX, CTAN
+
+Клас є на [CTAN](https://ctan.org/pkg/kpi-thesis), у TeX Live і MiKTeX: `tlmgr install kpi-thesis`
+(MiKTeX пропонує доставити його сам під час першої збірки). Цього досить, щоб писати
+`\documentclass{kpi-thesis}` у своєму документі. Шаблони, `just check` і плагін — лише в
+репозиторії, тож для повного сценарію клонуйте його, як вище. Клас із клону (`just install`)
+має перевагу над версією з TeX Live.
+
 ### Плагін для Claude Code
 
 ```
