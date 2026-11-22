@@ -612,6 +612,257 @@ def stats(root):
         print(f"{f.stem:17} " + "  ".join(f"{k} {v}" for k, v in vals.items()))
 
 
+def bib_records(text):
+    """(type, key, {field: value}, line) for each entry of a .bib file, with balanced braces."""
+    out = []
+    for m in re.finditer(r"@(\w+)\s*[{(]\s*([^,\s]+)\s*,", text):
+        kind = m.group(1).lower()
+        if kind in ("string", "comment", "preamble"):
+            continue
+        fields, i, depth = {}, m.end(), 1
+        start = i
+        while i < len(text) and depth:
+            depth += {"{": 1, "}": -1}.get(text[i], 0)
+            i += 1
+        body = text[start : i - 1]
+        parts, depth, quote, cur = [], 0, False, ""
+        for c in body:
+            if c == '"' and depth == 0:
+                quote = not quote
+            depth += {"{": 1, "}": -1}.get(c, 0)
+            if c == "," and depth == 0 and not quote:
+                parts.append(cur)
+                cur = ""
+            else:
+                cur += c
+        parts.append(cur)
+        for part in parts:
+            name, eq, val = part.partition("=")
+            if eq and re.fullmatch(r"\s*\w+\s*", name):
+                fields.setdefault(name.strip().lower(), val.strip().strip('{}"'))
+        out.append((kind, m.group(2), fields, text[: m.start()].count("\n") + 1))
+    return out
+
+
+YEAR = r"(?<![:\d])\b(1[5-9]\d\d|20\d\d)\b"
+
+
+def check_sources(rows, root, doc):
+    """ДСТУ 8302 details that show up in a written description: URL with «URL:» and the access
+    date, no «[Електронний ресурс]» / «Режим доступу» from the old ГОСТ 7.1, a year."""
+    items, in_bib = [], False
+    for row in rows:
+        text = row[2]
+        if "\\begin{thebibliography}" in text:
+            in_bib = True
+            continue
+        if "\\end{thebibliography}" in text:
+            in_bib = False
+        if not in_bib:
+            continue
+        m = re.search(r"\\bibitem(?:\[[^\]]*\])?\{([^}]+)\}(.*)", text)
+        if m:
+            items.append([m.group(1).strip(), row, m.group(2)])
+        elif items:
+            items[-1][2] += " " + text.strip()
+    for key, row, entry in items:
+        where = loc(row, root)
+        if re.search(r"Електронний ресурс|Режим доступу", entry, re.I):
+            report(WARN, where, f"«{key}»: «[Електронний ресурс]» і «Режим доступу» — з ГОСТ 7.1; за ДСТУ 8302 — «URL: … (дата звернення: …)»")
+        if re.search(r"\\url\{|https?://", entry):
+            if "дата звернення" not in entry and "DOI" not in entry:
+                report(WARN, where, f"«{key}»: URL без «(дата звернення: ДД.ММ.РРРР)»")
+            if re.search(r"\\url\{", entry) and not re.search(r"(URL|DOI)\s*:[\s~]*\\url\{", entry):
+                report(WARN, where, f"«{key}»: перед посиланням — «URL: »")
+        plain = re.sub(r"\\url\{[^}]*\}|https?://\S+|дата звернення[^)]*", "", entry)
+        if not re.search(YEAR, plain) and not re.search(r"б\.\s*р\.", plain) and not re.search(r"\\url\{|https?://", entry):
+            report(WARN, where, f"«{key}»: немає року видання")
+    if doc is None:
+        return
+    names, _ = bib_entries(rows, doc)
+    for name in names:
+        bib = doc.parent / name
+        if not bib.exists():
+            continue
+        text = bib.read_bytes().decode("utf-8-sig", errors="replace")
+        for kind, key, f, line in bib_records(text):
+            where = f"{bib.relative_to(root)}:{line}"
+            if "url" in f and "doi" not in f and "urldate" not in f:
+                report(WARN, where, f"«{key}»: url без urldate — у списку не буде «(дата звернення: …)»")
+            if re.search(r"Електронний ресурс|Режим доступу", " ".join(f.values()), re.I):
+                report(WARN, where, f"«{key}»: «[Електронний ресурс]» / «Режим доступу» не потрібні — стиль сам друкує «URL: …»")
+            if kind not in ("online", "software", "dataset", "www", "patent") and not ("date" in f or "year" in f):
+                report(WARN, where, f"«{key}»: немає date (року видання)")
+
+
+HEADING_CMDS = r"\\(?:section|subsection|subsubsection|structural|chapter)\*?(?:\[[^\]]*\])?\{"
+
+
+def balanced(text, start):
+    """The text of the brace group opening right before `start`."""
+    depth, i = 1, start
+    while i < len(text) and depth:
+        depth += {"{": 1, "}": -1}.get(text[i], 0)
+        i += 1
+    return text[start : i - 1] if depth == 0 else None
+
+
+ABBR_END = r"(?:\bт\.\s?[дп]|\bін|\bст|\bрр?|\bс|\bім|\betc|\bal)\.\s*$"
+
+
+def check_headings(rows, root):
+    for n, row in enumerate(rows):
+        for m in re.finditer(HEADING_CMDS, row[2]):
+            title = balanced(" ".join([row[2]] + [r[2] for r in rows[n + 1 : n + 4]]), m.end())
+            if not title:
+                continue
+            title = re.sub(r"\s+", " ", title).strip()
+            if re.search(r"(?<!\.)\.$", title) and not re.search(ABBR_END, title):
+                clause = "Д 7.1.20, М §6.1" if m.group(0).startswith(("\\section", "\\structural", "\\chapter")) else "Д 7.1.21, М §6.2"
+                report(ERR, loc(row, root), f"заголовок «{title}» з крапкою в кінці ({clause})")
+
+
+def check_abbreviations(rows, root):
+    """Inside a run of Cyrillic or of Latin abbreviations the order is alphabetical; the guide
+    lists abbreviations, then letter symbols, units and terms, so runs are compared separately."""
+    active, entries = False, []
+    for row in rows:
+        text = row[2]
+        if re.search(r"\\structural\{\s*ПЕРЕЛІК УМОВНИХ ПОЗНАЧЕНЬ", text):
+            active = True
+            continue
+        if active and re.search(r"\\end\{(?:longtable|tabular\*?|kpitable)\}|\\structural\{", text):
+            break
+        if active:
+            m = re.match(r"\s*(?:\\hline\s*)*([^&]+?)\s*&", text)
+            if m and not re.search(r"Скорочення|Позначення|Значення|Розшифрування|Термін", m.group(1)):
+                entries.append((m.group(1), row))
+
+    def script(t):
+        if "$" in t or "\\" in t or len(re.sub(r"\W", "", t)) == 1:
+            return "other"
+        c = next((c for c in t.lower() if c.isalpha()), "")
+        return "cyr" if c in UK_ALPHABET else "lat" if c.isascii() and c.isalpha() else "other"
+    run = []
+    for item in entries + [(None, None)]:
+        if item[0] is None or (run and script(item[0]) != script(run[-1][0])):
+            for (a, _), (b, rb) in zip(run, run[1:]):
+                if script(a) != "other" and sort_key(b) < sort_key(a):
+                    report(WARN, loc(rb, root), f"перелік скорочень: «{b}» має стояти перед «{a}» (за алфавітом)")
+                    break
+            run = []
+        if item[0] is not None:
+            run.append(item)
+
+
+LISTING_LINES = 80
+
+
+def check_listings(rows, root, doc):
+    """ПЗ carries listings up to a page (М §5.7); longer code goes to the program text."""
+    start = None
+    for row in rows:
+        text = row[2]
+        if "\\appendices" in text:
+            break
+        if re.search(r"\\begin\{(?:Verbatim|lstlisting|minted|verbatim)\}", text):
+            start = row
+            count = 0
+            continue
+        if start is not None:
+            if re.search(r"\\end\{(?:Verbatim|lstlisting|minted|verbatim)\}", text):
+                if count > LISTING_LINES:
+                    report(WARN, loc(start, root), f"лістинг на {count} рядків довший за сторінку — у ПЗ до 1 с., повний код — у «Текст програми»")
+                start = None
+            else:
+                count += 1
+            continue
+        for m in re.finditer(r"\\codeinput(?:\[([^\]]*)\])?\{([^}]+)\}", text):
+            opts, name = m.group(1) or "", m.group(2)
+            path = (row[0].parent / name)
+            if not path.exists():
+                path = doc.parent / name
+            if not path.exists():
+                continue
+            n = len(path.read_text(encoding="utf-8", errors="replace").splitlines())
+            first = re.search(r"firstline\s*=\s*(\d+)", opts)
+            last = re.search(r"lastline\s*=\s*(\d+)", opts)
+            n = (int(last.group(1)) if last else n) - (int(first.group(1)) - 1 if first else 0)
+            if n > LISTING_LINES:
+                report(WARN, loc(row, root), f"\\codeinput{{{name}}}: {n} рядків — у ПЗ лістинги до 1 с., повний код — у «Текст програми»")
+
+
+def check_unresolved(doc, root):
+    pages = pdf_pages_text(doc_pdf(doc))
+    if not pages or doc.stem in ("title", "source-code"):
+        return
+    bad = [i + 1 for i, p in enumerate(pages) if re.search(r"(?:рисун\w*|таблиц\w*|формул\w*|розділ\w*|пункт\w*|додат\w*|лістинг\w*|алгоритм\w*|с\.|[(\[~])\s*\?\?|\[\?\]", p, re.I)]
+    if bad:
+        report(WARN, str(doc_pdf(doc).relative_to(root)), f"«??» у PDF, с. {', '.join(map(str, bad[:10]))}: нерозв'язане посилання (або «??» у тексті — тоді пропустіть)")
+
+
+def check_footnotes(doc, root):
+    aux = doc.parent / "build" / f"{doc.stem}.aux"
+    if not aux.exists():
+        aux = doc.with_suffix(".aux")
+    if not aux.exists():
+        return
+    pages = re.findall(r"\\kpi@footnote\{([^}]*)\}", aux.read_text(encoding="utf-8", errors="replace"))
+    for page in dict.fromkeys(pages):
+        if pages.count(page) > 4:
+            report(WARN, str(doc_pdf(doc).relative_to(root)), f"с. {page} PDF: виносок {pages.count(page)}, не більше 4 на сторінці (Д 7.8)")
+
+
+DIPLOMA_DOCS = ["title", "specification", "explanatory-note", "source-code", "test-plan", "user-manual", "graphics"]
+SCHEMES = {"ССВ", "ССС", "ССД", "ССК", "ССМ", "СБД", "КЕ", "КЗ"}
+PROGRAM = "Інженерія програмного забезпечення інформаційних систем"
+
+
+def check_diploma(root):
+    """Composition of the diploma package and the title data in meta.tex (normcontrol checklist)."""
+    meta = root / "meta.tex"
+    if not meta.exists() or not (root / "title").is_dir():
+        return
+    for name in DIPLOMA_DOCS:
+        if not (root / name / f"{name}.tex").exists():
+            report(ERR, name, f"немає документа {name}/{name}.tex — склад диплома (М §4)")
+    graphics = root / "graphics" / "graphics.tex"
+    if graphics.exists():
+        rows = load(graphics)
+        sheets = [(m.group(1).strip(), row) for row in rows
+                  for m in re.finditer(r"\\(?:graphicsSheet|diagramPage)\{([^}]*)\}", row[2])]
+        if len(sheets) < 3:
+            report(ERR, str(graphics.relative_to(root)), f"аркушів графічного матеріалу {len(sheets)}, потрібно не менше 3 (М §4)")
+        for code, row in sheets:
+            if code not in SCHEMES:
+                report(WARN, loc(row, root), f"код схеми «{code}» не з переліку М §5.4 ({', '.join(sorted(SCHEMES))}); плакати — за погодженням")
+    note = root / "explanatory-note" / "explanatory-note.tex"
+    if note.exists():
+        text = "".join(r[2] for r in load(note))
+        m = re.search(r"\\appendixpdf\{[^}]*(?:подібност|Unicheck|плагіат)[^}]*\}\{([^}]+)\}", text, re.I)
+        if not m and not re.search(r"\\appendix\{[^}]*(?:подібност|Unicheck|плагіат)", text, re.I):
+            report(WARN, str(note.relative_to(root)), "немає додатка зі звітом подібності (Unicheck) — \\appendixpdf{Звіт подібності}{...}")
+        elif m and not (note.parent / m.group(1)).exists():
+            report(WARN, str(note.relative_to(root)), f"звіт подібності: немає файлу {m.group(1)}")
+    rows = load(meta)
+    text = "\n".join(r[2] for r in rows)
+    m = re.search(r"^\s*program\s*=\s*\{([^}]*)\}", text, re.M)
+    if m and re.sub(r"[~\s]+", " ", m.group(1)).strip() != PROGRAM:
+        report(WARN, "meta.tex", f"освітня програма «{m.group(1)}» — для 4 курсу ІПІ «{PROGRAM}» (чекліст)")
+    blank = []
+    for row in rows:
+        km = re.match(r"\s*([\w-]+(?:stamp|short))\s*=\s*\{(.*)\}\s*,?\s*$", row[2])
+        if km and (not km.group(2).strip() or re.search(r"Прізвище|ПРІЗВИЩЕ|\\todo", km.group(2))):
+            blank.append((km.group(1), row))
+    if blank:
+        report(WARN, loc(blank[0][1], root), f"не заповнено {', '.join(k for k, _ in blank)} — прізвища в штампах і підписах перевіряє нормоконтроль")
+    cal = re.search(r"\\kpiCalendarRows\}?\s*\{(.*?)\n\s*\}", text, re.S)
+    if cal:
+        empty = [r for r in re.split(r"\\\\", cal.group(1)) if "&" in r and not any(c.strip() for c in r.split("&")[2:])]
+        if empty:
+            report(WARN, "meta.tex", f"календарний план: без термінів {len(empty)} рядк. (\\kpiCalendarRows)")
+
+
 def main(argv):
     issues.clear()
     todos.clear()
@@ -635,6 +886,14 @@ def main(argv):
         check_volume(doc, root, volume_limits(doc))
         check_placement(doc, root)
         check_short_pages(doc, root)
+        check_sources(rows, root, doc)
+        check_headings(rows, root)
+        if is_note:
+            check_abbreviations(rows, root)
+        if doc.stem == "explanatory-note":
+            check_listings(rows, root, doc)
+        check_unresolved(doc, root)
+        check_footnotes(doc, root)
         if (
             "meta.tex" not in "".join(r[2] for r in rows if "\\input" in r[2])
             and (root / "meta.tex").exists()
@@ -655,6 +914,7 @@ def main(argv):
                     "шифр документа вписано вручну; використайте \\kpiCode{...} з meta.tex",
                 )
     check_annotations(root)
+    check_diploma(root)
     for path, lines in todos.items():
         lines = sorted(set(lines))
         where = loc((path, lines[0], ""), root)

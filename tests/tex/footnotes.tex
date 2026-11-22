@@ -1,0 +1,6 @@
+% just test: a footnote in a heading must not hang the build; every footnote lands in .aux.
+\documentclass{kpi-thesis}
+\begin{document}
+\section{Назва\protect\footnote{у заголовку}}
+Текст\footnote{перша} і\footnotemark\ ще.\footnotetext{друга}
+\end{document}
