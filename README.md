@@ -1,6 +1,7 @@
 # kpi-thesis
 
 [![CTAN](https://img.shields.io/ctan/v/kpi-thesis)](https://ctan.org/pkg/kpi-thesis)
+[![Open in Overleaf](https://img.shields.io/badge/Open%20in-Overleaf-47A141?logo=overleaf&logoColor=white)](https://www.overleaf.com/docs?snip_uri=https://github.com/sokolovgit/kpi-thesis/releases/latest/download/kpi-thesis-coursework-overleaf.zip&engine=lualatex)
 
 LaTeX-клас і шаблони для дипломного проєкту бакалавра й курсових робіт КПІ ім. Ігоря
 Сікорського, ФІОТ, кафедра інформатики та програмної інженерії (ОП «Інженерія програмного
@@ -28,6 +29,8 @@ with a normcontrol linter and a Claude Code plugin. Docs are in Ukrainian.*
 - **Плагін для Claude Code** — скіл, що знає структуру диплома, правила й граблі класу.
 
 Сам клас працює і без Claude.
+
+Якщо шаблон знадобився, поставте ⭐ — так його легше знайдуть інші студенти.
 
 ## Встановлення
 
