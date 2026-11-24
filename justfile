@@ -44,7 +44,7 @@ install-skill:
     mkdir -p "$HOME/.claude/skills"
     ln -sfn "{{ROOT}}/skills/kpi-thesis" "$HOME/.claude/skills/kpi-thesis"
 
-# Скіл для OpenCode: симлінк у ~/.config/opencode/skills (оновлюється разом із git pull)
+# Скіл для OpenCode без install-skill (OpenCode читає й ~/.claude/skills): симлінк у ~/.config/opencode/skills
 install-opencode-skill:
     mkdir -p "${XDG_CONFIG_HOME:-$HOME/.config}/opencode/skills"
     ln -sfn "{{ROOT}}/skills/kpi-thesis" "${XDG_CONFIG_HOME:-$HOME/.config}/opencode/skills/kpi-thesis"
