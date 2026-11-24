@@ -4,6 +4,9 @@
   збирається, з попередженням класу. Через `.xdv` (`$pdf_mode = 5`) не збирати: ламає аркуші А3.
 - **Немає Times New Roman / Courier New** (Linux без mscorefonts; в Overleaf вони є) — клас бере TeX Gyre
   Termes / Cursor і пише попередження. Для здачі потрібен саме Times New Roman.
+- **Overleaf: «Your project needs more compile time»** — безкоштовний план обриває компіляцію
+  через 10 с. Zip з релізу перший раз збирається за один прохід. Велика курсова з багатьма
+  джерелами може впиратися в ліміт: Menu → Compiler → XeLaTeX (швидший) або локальна збірка.
 - **`_` у тексті = математика.** Заглушки на кшталт `«__» ____` у `meta.tex` дають
   «Missing $ inserted». Для порожніх місць — `\todo{...}` або `\sigline{2cm}`.
 - **`\todo` не може обгортати `\includegraphics` / `\lstinputlisting` неіснуючого файлу** —
