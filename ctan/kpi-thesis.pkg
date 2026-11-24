@@ -2,7 +2,7 @@
 % the uploader's email is filled in then and never stored here. Before an upload: bump
 % \version, write the announcement (what changed) and the note.
 \pkg{kpi-thesis}
-\version{2.1.0}
+\version{2.1.1}
 \author{Oleksandr Sokolov}
 \uploader{Oleksandr Sokolov}
 \email{}
@@ -28,14 +28,6 @@ The class needs LuaLaTeX. It uses Times New Roman and Courier New, required by t
 and falls back to TeX Gyre Termes and Cursor where they are missing. The documentation is
 in Ukrainian.
 \end{description}
-\begin{announcement}
-Version 2.1.0 adds kpi-thesis-dstu, a biblatex style (biber backend) for Ukrainian reference
-lists per DSTU 8302:2015: books with 1-3 authors in the heading and 4+ after the title,
-journal articles, collections and proceedings, theses, standards, laws, patents, web pages
-and repositories, with DOI or URL and access date, and English and Russian sources in their
-own language. The class turns it on with \kpisetup{bibliography=biblatex,
-bib-resource=sources.bib}; the order of sources is set with sources=citation, alphabetical
-or chronological. Documents with a hand-written thebibliography build as before.
-\end{announcement}
+\begin{announcement}\end{announcement}
 \begin{note}\end{note}
 \file{../kpi-thesis.zip}
