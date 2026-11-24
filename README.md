@@ -131,6 +131,15 @@ Claude проведе через встановлення.
 Без плагіна: `just install-skill` робить симлінк скіла в `~/.claude/skills` з клону, тоді
 скіл оновлюється разом із `git pull`. Обидва способи разом не вмикайте.
 
+### Плагін для OpenCode
+
+Той самий скіл працює і в OpenCode: `just install-opencode-skill` робить симлінк у
+`~/.config/opencode/skills/kpi-thesis` з клону, тоді скіл оновлюється разом із `git pull`.
+Клас ця команда не ставить — потрібен `just install` вище.
+
+В ізольованому середовищі (Docker чи sandbox), де `~/.config/opencode` недоступний, скопіюйте
+теку `skills/kpi-thesis` в `.opencode/skills/kpi-thesis` усередині робочої директорії проєкту.
+
 ## Використання
 
 ```sh
