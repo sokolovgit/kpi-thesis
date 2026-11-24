@@ -150,6 +150,15 @@ overleaf:
     cp -R templates/coursework/main.tex templates/coursework/sources.bib templates/coursework/chapters "$d/"
     mkdir -p "$d/media" && touch "$d/media/.keep"
     cp tex/kpi-thesis.cls tex/kpi-thesis-*.sty tex/kpi-thesis-dstu.bbx tex/kpi-thesis-dstu.cbx "$d/"
-    printf '%s\n' '$pdf_mode = 4;' > "$d/latexmkrc"
+    printf '%s\n' '$pdf_mode = 4;' "\$hash_calc_ignore_pattern{'xml'} = '^';" > "$d/latexmkrc"
+    # Overleaf's free plan stops a compile after 10 s; a clean build is 4 passes and biber.
+    # Overleaf runs latexmk -jobname=output: with these intermediate files it makes one pass.
+    pre=$(mktemp -d); cp -R "$d"/. "$pre"
+    (cd "$pre" && TEXMFHOME=/nonexistent latexmk -cd -jobname=output -interaction=batchmode -f -lualatex main.tex >/dev/null 2>&1) \
+      || { echo "overleaf: шаблон не зібрався, див. $pre/output.log"; exit 1; }
+    cp "$pre"/output.{aux,bbl,bcf,toc,kpistats,run.xml} "$d/"
+    grep -v '^  "/' "$pre/output.fdb_latexmk" > "$d/output.fdb_latexmk"
+    ! grep -q '"/' "$d/output.fdb_latexmk" || { echo "overleaf: абсолютні шляхи в output.fdb_latexmk"; exit 1; }
+    rm -rf "$pre"
     (cd "$d" && zip -qrX ../kpi-thesis-coursework-overleaf.zip .)
     echo "-> build/kpi-thesis-coursework-overleaf.zip (Overleaf: New Project → Upload Project)"

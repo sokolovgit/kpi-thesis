@@ -99,6 +99,9 @@ just test           # необов'язково: збирає обидва ша�
 акаунт). Те саме вручну: `kpi-thesis-coursework-overleaf.zip` з
 [релізів](https://github.com/sokolovgit/kpi-thesis/releases) → New Project → Upload Project.
 Компілятор — LuaLaTeX (Menu → Compiler), шрифти Times New Roman і Courier New в Overleaf є.
+Безкоштовний план Overleaf обриває компіляцію через 10 секунд. У zip уже є проміжні файли першої
+збірки, тож вона вкладається в один прохід. Коли робота виросте й компіляція почне впиратися в
+ліміт, допоможе XeLaTeX (Menu → Compiler, приблизно на чверть швидший) або локальна збірка.
 `just check` і плагін в Overleaf не працюють: для них — локальна збірка.
 
 ### Лише клас: TeX Live, MiKTeX, CTAN

@@ -365,5 +365,7 @@
 \@onlypreamble\kpisetup
 
 \RequirePackage[hidelinks]{hyperref}
+% PDF outlines in the same pass, without hyperref's extra rerun.
+\RequirePackage{bookmark}
 
 \endinput
