@@ -8,9 +8,9 @@
 
 - `CHANGELOG.md`: розділ `## vX.Y.Z — РРРР-ММ-ДД`, а для MAJOR і MINOR ще `### Перехід з X.Y`
   (що змінити в уже створених роботах).
-- `tex/*.cls`, `tex/*.sty`: дата й версія в `\ProvidesClass` / `\ProvidesPackage`
-  (`[РРРР/ММ/ДД vX.Y ...]`).
-- `ctan/kpi-thesis.pkg`: `\version{X.Y.Z}`; для MAJOR і MINOR — текст `announcement` англійською
+- `tex/*`: дата й повна версія в `\ProvidesClass` / `\ProvidesPackage` / `\ProvidesFile`
+  (`[РРРР/ММ/ДД vX.Y.Z ...]`): CTAN не приймає реліз, якщо версія у файлах інша, ніж у поданні.
+- `ctan/kpi-thesis.pkg`: `\version{X.Y.Z РРРР-ММ-ДД}` (дата — як у CHANGELOG); для MAJOR і MINOR — текст `announcement` англійською
   (що нового), для PATCH його лишають порожнім, і CTAN не розсилає анонс. `note` — для команди
   CTAN, якщо є що пояснити.
 - `docs/kpi-thesis-doc.tex`: «Версія X.Y.Z, дата» у шапці.

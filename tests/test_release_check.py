@@ -19,8 +19,8 @@ spec.loader.exec_module(release_check)
 def repo(
     tmp,
     changelog="## v2.1.0 — 2026-12-01",
-    provides="2026/12/01 v2.1",
-    pkg="2.1.0",
+    provides="2026/12/01 v2.1.0",
+    pkg="2.1.0 2026-12-01",
     doc="2.1.0",
 ):
     root = Path(tmp)
@@ -55,13 +55,25 @@ class ReleaseCheckTest(unittest.TestCase):
 
     def test_stale_provides_date(self):
         with tempfile.TemporaryDirectory() as tmp:
-            errors = release_check.check(repo(tmp, provides="2026/11/17 v2.1"))
+            errors = release_check.check(repo(tmp, provides="2026/11/17 v2.1.0"))
             self.assertEqual(len(errors), 2)
             self.assertIn("датовано 2026/11/17", errors[0])
 
+    def test_short_provides_version(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            errors = release_check.check(repo(tmp, provides="2026/12/01 v2.1"))
+            self.assertEqual(len(errors), 2)
+            self.assertIn("має v2.1, а реліз — v2.1.0", errors[0])
+
+    def test_pkg_version_without_date(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            errors = release_check.check(repo(tmp, pkg="2.1.0"))
+            self.assertEqual(len(errors), 1)
+            self.assertIn("2.1.0 2026-12-01", errors[0])
+
     def test_version_mismatches(self):
         with tempfile.TemporaryDirectory() as tmp:
-            errors = release_check.check(repo(tmp, pkg="2.0.0", doc="2.0.0"), "v2.0.0")
+            errors = release_check.check(repo(tmp, pkg="2.0.0 2026-12-01", doc="2.0.0"), "v2.0.0")
             text = "\n".join(errors)
             self.assertIn("ctan/kpi-thesis.pkg", text)
             self.assertIn("docs/kpi-thesis-doc.tex", text)
