@@ -23,25 +23,24 @@ def check(root, tag=None):
         return [f"CHANGELOG.md: v{version} ще без дати релізу («{date}»)"]
     tex_date = date.replace("-", "/")
 
-    for f in sorted((root / "tex").glob("*.[cs][lt][sy]")):
+    # CTAN wants the full release version in every \Provides* (CTAN-upload-addendum#versionidentifier).
+    for f in sorted((root / "tex").glob("*.*")):
         for name, d, v in re.findall(
-            r"\\Provides(?:Class|Package)\{([^}]+)\}\[(\S+) v(\S+)", f.read_text()
+            r"\\Provides(?:Class|Package|File)\{([^}]+)\}\[(\S+) v(\S+)", f.read_text()
         ):
             if d != tex_date:
                 errors.append(
                     f"tex/{f.name}: {name} датовано {d}, а реліз — {tex_date}"
                 )
-            if v not in (f"{major}.{minor}", version):
-                errors.append(
-                    f"tex/{f.name}: {name} має v{v}, а реліз — v{major}.{minor}"
-                )
+            if v != version:
+                errors.append(f"tex/{f.name}: {name} має v{v}, а реліз — v{version}")
 
     pkg = re.search(
         r"^\\version\{([^}]*)\}", (root / "ctan/kpi-thesis.pkg").read_text(), re.M
     )
-    if not pkg or pkg.group(1) != version:
+    if not pkg or pkg.group(1) != f"{version} {date}":
         errors.append(
-            f"ctan/kpi-thesis.pkg: \\version{{{pkg.group(1) if pkg else ''}}}, а реліз — {version}"
+            f"ctan/kpi-thesis.pkg: \\version{{{pkg.group(1) if pkg else ''}}}, а реліз — {version} {date}"
         )
 
     if f"Версія {version}," not in (root / "docs/kpi-thesis-doc.tex").read_text():

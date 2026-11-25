@@ -2,7 +2,7 @@
 % the uploader's email is filled in then and never stored here. Before an upload: bump
 % \version, write the announcement (what changed) and the note.
 \pkg{kpi-thesis}
-\version{2.1.2}
+\version{2.1.2 2026-11-24}
 \author{Oleksandr Sokolov}
 \uploader{Oleksandr Sokolov}
 \email{}
